@@ -63,12 +63,15 @@ def mask_maker_dk(df, teamlist):
      
     return m
     
-def solver(df, masks, params, limits, rosters):
+def solver(df, m, params, limits, rosters):
     # convert dictionary to actual variable names
-    for k in masks: exec('{KEY} = {VALUE}'.format(KEY = k, VALUE = repr(masks[k])))
-    for k in params: exec('{KEY} = {VALUE}'.format(KEY = k, VALUE = repr(params[k])))
-    for k in limits: exec('{KEY} = {VALUE}'.format(KEY = k, VALUE = repr(limits[k])))
-    
+    p, h, teambool = m['p'], m['h'], m['tb']
+    b1, b2, b3, ss, of= m['b1'] , m['b2'], m['b3'], m['ss'], m['of']
+    B, mst, overlap = params['B'], params['maxst'], params['overlap']
+    nptch, no_1b, no_2b = limits['no_ptch'], limits['no_1b'], limits['no_2b']
+    no_3b, no_ss, no_of = limits['no_3b'], limits['no_ss'], limits['no_of']   
+    nhit = no_1b + no_2b + no_3b + no_ss + no_of
+     
     pr = np.array(df['Proj FP'])
 
     cost = np.array(df['Salary'].to_list())  #cost vector
@@ -83,8 +86,8 @@ def solver(df, masks, params, limits, rosters):
     #Setup Constraints
     m.addConstr(c @ x <= B)                                  #budget constraint
 
-    m.addConstr(np.diag(p) @ x @ v1 == nptch)           #  2 pitchers
-    m.addConstr(np.diag(h) @ x @ v1 == nhit)           #  7 hitters
+    m.addConstr(np.diag(p) @ x @ v1 == nptch)           #  num pitchers
+    m.addConstr(np.diag(h) @ x @ v1 == nhit)           #  num hitters
 
     for tbarr in teambool:   # no opposing pitchers 
         m.addConstr(mst*(np.diag(tbarr) @ np.diag(p) @ x @ v1) + np.diag(tbarr) @ np.diag(h) @ x @ v1 <= mst) 
@@ -95,14 +98,14 @@ def solver(df, masks, params, limits, rosters):
     m.addConstr(np.diag(ss) @ x  @ v1 == no_ss) 
     m.addConstr(np.diag(of) @ x  @ v1 == no_of) 
     
-    for rosters in sl:
+    for sl in rosters:
         m.addConstr(sl @ x <= overlap)
 
     m.setObjective(pr @ x, GRB.MAXIMIZE)        #objective function
     m.optimize()
 
     solution = np.array([int(v.X) for v in m.getVars() if abs(v.obj) > 1e-6])
-
+    return solution
  
 def main():
     date, no_games, max_stck, overlap, B = sys.argv[1:]
@@ -112,8 +115,12 @@ def main():
     no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
     frame, teams = frame_maker_dk(date, no_games)
     masks = mask_maker_dk(frame, teams)
-    s=solver(frame, masks, params, limits, rosters)
-    rosters.append(s)
+    for i in range(no_rosters['DK']):
+        soln=solver(frame, masks, params, limits, rosters)
+        rosters.append(soln)
+    for i in range(no_rosters['FD']):
+        soln=solver(frame, masks, params, limits, rosters)
+        rosters.append(soln)
     
 if __name__ == "__main__":
     main()

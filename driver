@@ -1,0 +1,7 @@
+import os,sys
+
+for ovlp in [3,4,5]: 
+    for i in range(31):
+        date = 4_+str(i)
+        os.system('python code_for_Github.py {}  9 4 {}'.format(date,ovlp))
+    

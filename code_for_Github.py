@@ -36,7 +36,7 @@ def create_base(nparr):  # create basis vector from positions
         tmplst.append(2**elmt>>1)
     return tmplst
     
-def frame_maker_dk(date, numg):
+def frame_maker(date, numg, platform): # format data frames, cut away fat
     pdf = pd.read_csv('data/DFN MLB Pitchers {} {}.csv'.format(platform, date))
     hdf = pd.read_csv('data/DFN MLB Hitters {} {}.csv'.format(platform, date))
 
@@ -47,13 +47,14 @@ def frame_maker_dk(date, numg):
     df = pd.concat([pdf, hdf])
     df['Pos'] = df['Pos'].str.split('/').str[0]  # for multi-pos players choose 1st pos
     df = df[df['Proj FP']>0]       # 0 is a bad fantasy score to use
+    return df, []
 
     teamlist = team_sampler(df, int(numg))  # only choose teams from randomly chosen games
     df = df[df['Team'].isin(teamlist)]
 
     return df, teamlist
 
-def mask_maker_dk(df, teamlist, maximst):
+def mask_maker(df, teamlist, maximst):
     tothit = 9                          # nine hitters in order
     sp = col_to_npbool(df,'Pos','SP')   # pitcher mask
     rp = col_to_npbool(df,'Pos','RP')
@@ -147,8 +148,12 @@ def main():
     rosters = []
     params = {'B': float(50000),'maxst': int(max_stck),'overlap': int(overlap),'tc': 2}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
-    frame, teams = frame_maker(date, no_games)
+    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
+    frame, teams = frame_maker(date, no_games, 'DK')
+    frame.to_csv('1.csv')
+    frame, teams = frame_maker(date, no_games, 'FD')
+    frame.to_csv('2.csv')
+    sys.exit()
     masks = mask_maker(frame, teams, params['maxst'])
     for i in range(no_rosters['DK']):  #get DraftKings rosters
         soln=solver(frame, masks, params, limits, rosters, 'DK')
@@ -158,9 +163,8 @@ def main():
         
     params['B'] = float(35000) 
     limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_c1b': 2,'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
-    frame, teams = frame_maker(date, no_games)
+    frame, teams = frame_maker(date, no_games, 'FD')
     masks = mask_maker(frame, teams, params['maxst'])
-    
     for i in range(no_rosters['FD']): #get FanDuel rosters
         soln=solver(frame, masks, params, limits, rosters,'FD')
         rosters.append(soln)

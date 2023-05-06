@@ -1,6 +1,7 @@
 #python code_for_Github.py  4_26 9 4 3 # gets data for 4_26, 9 games, at most 4-stack, budget 50K
-import pandas as pd, numpy as np, sys, random, scipy.sparse as sp, gurobipy as gp
+import pandas as pd, numpy as np, sys, random, scipy.sparse as sp, gurobipy as gp, time
 from gurobipy import GRB
+
 
 def col_to_npbool(dframe, col, val):
     vec = np.array((dframe[col] == val).astype(int).to_list())
@@ -13,7 +14,7 @@ def grader(df, sol_matrix, basefilename):  # score results\output to file
         for sol in sol_matrix :
             score = df['Actual FP'].dot(sol)
             scorecum += score
-            f.write(str(score)+','Z)
+            f.write(str(score)+',')
         f.write(str(scorecum))
 
 def team_sampler(dframe, n): # get sample of n teams from team list
@@ -36,8 +37,8 @@ def create_base(nparr):  # create basis vector from positions
     return tmplst
     
 def frame_maker_dk(date, numg):
-    pdf = pd.read_csv('data/DFN MLB Pitchers DK {0}.csv'.format(date))
-    hdf = pd.read_csv('data/DFN MLB Hitters DK {0}.csv'.format(date))
+    pdf = pd.read_csv('data/DFN MLB Pitchers {} {}.csv'.format(platform, date))
+    hdf = pd.read_csv('data/DFN MLB Hitters {} {}.csv'.format(platform, date))
 
     pdf = pdf[['Player Name','Pos','Salary','Team','Opp','Proj FP','Actual FP']]
     hdf = hdf[['Player Name','Pos','Salary','Team','Opp','Batting Order (Confirmed)','Proj FP','Actual FP']]
@@ -52,7 +53,8 @@ def frame_maker_dk(date, numg):
 
     return df, teamlist
 
-def mask_maker_dk(df, teamlist):
+def mask_maker_dk(df, teamlist, maximst):
+    tothit = 9                          # nine hitters in order
     sp = col_to_npbool(df,'Pos','SP')   # pitcher mask
     rp = col_to_npbool(df,'Pos','RP')
     p = np.array([sp[i]+rp[i] for i in range(len(sp))])
@@ -70,20 +72,28 @@ def mask_maker_dk(df, teamlist):
     tb = []               # team masks
     for team in teamlist:     
         tb.append(col_to_npbool(df,'Team',team))
-
+    
+    st = []   # stacking masks
+    for k in range(tothit): 
+        stemp = np.array([0]*len(df['Batting Order (Confirmed)']))
+        for i in range(maximst):
+            if k+i > tothit: stemp+=(df['Batting Order (Confirmed)']==str(k+i-tothit+1))
+            if k+i <= tothit: stemp+=(df['Batting Order (Confirmed)']==str(k+i+1))
+        st.append(stemp)
+    
     #masks in dict for easier transport 
-    m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb}     
+    m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'st': st}     
     return m
     
 def solver(df, m, params, limits, rosters, platform):
     #need to adjust constraints for FD
-    #catcher/1b constraint (fd only)
-    #order constraint
+    #order constraint not working sometimes
+    #SUCCESSive order constraints for when things run out
     # convert dictionary to actual variable names
-    p, h, teambool = m['p'], m['h'], m['tb']
+    p, h, teambool, st = m['p'], m['h'], m['tb'], m['st']
     c, b1, b2, b3, ss, of = m['c'], m['b1'] , m['b2'], m['b3'], m['ss'], m['of']
-    B, mst, overlap = params['B'], params['maxst'], params['overlap']
-    nptch, nhit, no_c, no_1b, no_2b = limits['no_ptch'], limits['no_hit'], limits['no_c'], limits['no_1b'], limits['no_2b']
+    B, mst, overlap, tc = params['B'], params['maxst'], params['overlap'], params['tc']
+    nptch, nhit, no_c, no_1b, no_c1b, no_2b = limits['no_ptch'], limits['no_hit'], limits['no_c'], limits['no_1b'], limits['no_c1b'], limits['no_2b']
     no_3b, no_ss, no_of = limits['no_3b'], limits['no_ss'], limits['no_of']   
     # = no_c + no_1b + no_2b + no_3b + no_ss + no_of
      
@@ -95,8 +105,9 @@ def solver(df, m, params, limits, rosters, platform):
     v1 = np.array(len(df)*[1])  # vector of ones used for summations
 
     m = gp.Model()
+    m.setParam("LogToConsole",0)
     x = m.addMVar(len(df), vtype=GRB.BINARY) # roster 
-
+    v = m.addMVar(len(teambool)*len(st), vtype=GRB.BINARY) #ensures consecutive hitters 
 
     #Setup Constraints
     m.addConstr(d @ x <= B)                                  #budget constraint
@@ -104,15 +115,23 @@ def solver(df, m, params, limits, rosters, platform):
     m.addConstr(np.diag(p) @ x @ v1 == nptch)           #  num pitchers
     m.addConstr(np.diag(h) @ x @ v1 == nhit)           #  num hitters
 
-    for tbarr in teambool:   # no opposing pitchers / only a max of mst hitters 
-        m.addConstr(mst*(np.diag(tbarr) @ np.diag(p) @ x @ v1) + np.diag(tbarr) @ np.diag(h) @ x @ v1 <= mst) 
-    
+    i = 0  # order counter
+    for tbarr in teambool: 
+        m.addConstr(mst*(np.diag(tbarr) @ np.diag(p) @ x @ v1) + np.diag(tbarr) @ np.diag(h) @ x @ v1 <= mst)    # no opposing pitchers / only a max of mst hitters
+        for od in st:          # consecutive batters constraint
+           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(od) @ x @ v1 >= mst*v[i])
+           i += 1
+           
+    m.addConstr(sum(v) >= tc)    # ensure tc number of teams w order constraint
+           
     m.addConstr(np.diag(c) @ x  @ v1 <= no_c)  # positional constraints 
     m.addConstr(np.diag(b1) @ x  @ v1 <= no_1b)  # positional constraints 
     m.addConstr(np.diag(b2) @ x  @ v1 <= no_2b) 
     m.addConstr(np.diag(b3) @ x  @ v1 <= no_3b) 
     m.addConstr(np.diag(ss) @ x  @ v1 <= no_ss) 
-    m.addConstr(np.diag(of) @ x  @ v1 <= no_of) 
+   
+    m.addConstr(np.diag(of) @ x  @ v1 <= no_of)   #(below: meant for FD but works w DK
+    m.addConstr(np.diag(c) @ x  @ v1 + np.diag(b1) @ x  @ v1 <= no_c1b)  # c/1b <=2 (FD)
     
     for sl in rosters:
         m.addConstr(sl @ x <= overlap)
@@ -126,21 +145,27 @@ def solver(df, m, params, limits, rosters, platform):
 def main():
     date, no_games, max_stck, overlap = sys.argv[1:]
     rosters = []
-    params = {'B': float(50000), 'maxst': int(max_stck), 'overlap': int(overlap)}
-    limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
+    params = {'B': float(50000),'maxst': int(max_stck),'overlap': int(overlap),'tc': 2}
+    limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
     no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
-    frame, teams = frame_maker_dk(date, no_games)
-    masks = mask_maker_dk(frame, teams)
+    frame, teams = frame_maker(date, no_games)
+    masks = mask_maker(frame, teams, params['maxst'])
     for i in range(no_rosters['DK']):  #get DraftKings rosters
         soln=solver(frame, masks, params, limits, rosters, 'DK')
         rosters.append(soln)
+        print(i)
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
     params['B'] = float(35000) 
-    limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
+    limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_c1b': 2,'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
+    frame, teams = frame_maker(date, no_games)
+    masks = mask_maker(frame, teams, params['maxst'])
     
     for i in range(no_rosters['FD']): #get FanDuel rosters
         soln=solver(frame, masks, params, limits, rosters,'FD')
         rosters.append(soln)
+        print(i)
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
     grader(frame, rosters, sys.argv[2:])#,
     

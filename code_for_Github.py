@@ -36,22 +36,43 @@ def create_base(nparr):  # create basis vector from positions
         tmplst.append(2**elmt>>1)
     return tmplst
     
-def frame_maker(date, numg, platform): # format data frames, cut away fat
-    pdf = pd.read_csv('data/DFN MLB Pitchers {} {}.csv'.format(platform, date))
-    hdf = pd.read_csv('data/DFN MLB Hitters {} {}.csv'.format(platform, date))
+def frame_maker(id_col, date, numg, platform): # format data frames, cut away fat
+    pdf1 = pd.read_csv('data/DFN MLB Pitchers {} {}.csv'.format(platform, date))
+    pdf1 = pdf1[['Player Name','Pos','Salary','Team','Opp','Proj FP','Actual FP']]
+    pdf2 = pd.read_csv('data/DFN MLB Pitchers {} {}.csv'.format(platform, date))
+    pdf2 = pdf2[['Player Name','Pos','Salary','Team','Opp','Proj FP','Actual FP']]
+    hdf1 = pd.read_csv('data/DFN MLB Hitters {} {}.csv'.format(platform, date))
+    hdf1 = hdf1[['Player Name','Pos','Salary','Team','Opp','Batting Order (Confirmed)','Proj FP','Actual FP']]
+    hdf1 = hdf1[hdf1['Batting Order (Confirmed)'] != 'x']    #only confirmed ordered batters
+    hdf2 = pd.read_csv('data/DFN MLB Hitters {} {}.csv'.format(platform, date))
+    hdf2 = hdf2[['Player Name','Pos','Salary','Team','Opp','Batting Order (Confirmed)','Proj FP','Actual FP']]
+    hdf2 = hdf2[hdf2['Batting Order (Confirmed)'] != 'x']    #only confirmed ordered batters
 
-    pdf = pdf[['Player Name','Pos','Salary','Team','Opp','Proj FP','Actual FP']]
-    hdf = hdf[['Player Name','Pos','Salary','Team','Opp','Batting Order (Confirmed)','Proj FP','Actual FP']]
-    hdf = hdf[hdf['Batting Order (Confirmed)'] != 'x']    #only confirmed ordered batters
-
+    pdf1['Name_Team'] = pdf1['Player Name'] + '_' + pdf1['Team']
+    pdf2['Name_Team'] = pdf2['Player Name'] + '_' + pdf1['Team']
+    hdf1['Name_Team'] = hdf1['Player Name'] + '_' + hdf1['Team']
+    hdf2['Name_Team'] = hdf2['Player Name'] + '_' + hdf2['Team']
+    
+    print(hdf1)
+    print(hdf2)    
+    pdf = pd.merge(pdf1, pdf2, how = 'inner', on = 'Name_Team')
+    hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
+    print(hdf)
+    sys.exit()
     df = pd.concat([pdf, hdf])
     df['Pos'] = df['Pos'].str.split('/').str[0]  # for multi-pos players choose 1st pos
     df = df[df['Proj FP']>0]       # 0 is a bad fantasy score to use
-    return df, []
 
-    teamlist = team_sampler(df, int(numg))  # only choose teams from randomly chosen games
+    if platform == 'DK': # only choose teams from randomly chosen games
+        teamlist = team_sampler(df, int(numg))  # (FD/DK both use games dictated by DK)
+    else:                 # FD frame dictated by DK entries  
+        df['Name_Team'] = df['Player Name'] + df['Team']
+        df.reindex(id_col.to_list())
+        print(df)
+        sys.exit()
+        
     df = df[df['Team'].isin(teamlist)]
-
+    
     return df, teamlist
 
 def mask_maker(df, teamlist, maximst):
@@ -149,11 +170,8 @@ def main():
     params = {'B': float(50000),'maxst': int(max_stck),'overlap': int(overlap),'tc': 2}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
     no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
-    frame, teams = frame_maker(date, no_games, 'DK')
-    frame.to_csv('1.csv')
-    frame, teams = frame_maker(date, no_games, 'FD')
-    frame.to_csv('2.csv')
-    sys.exit()
+    frame, teams = frame_maker([], date, no_games, 'DK')
+    frame2, teams = frame_maker(frame['Name_Team'], date, no_games, 'FD')
     masks = mask_maker(frame, teams, params['maxst'])
     for i in range(no_rosters['DK']):  #get DraftKings rosters
         soln=solver(frame, masks, params, limits, rosters, 'DK')

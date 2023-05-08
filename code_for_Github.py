@@ -161,7 +161,13 @@ def solver(df, m, params, limits, rosters, platform):
     #m.addConstr(sum(w) >= 1)    # ensure at least 1 team w order constraint 2
     #m.addConstr(v @ w == 0)     # make sure order constraints distinct
            
-    m.addConstr(np.diag(c) @ x  @ v1 <= no_c)  # positional constraints 
+    m.addConstr(np.diag(c) @ x  @ v1 + np.diag(b1) @ x  @ v1 >= 1)  # c/1b <=2 (FD)
+    m.addConstr(np.diag(b2) @ x  @ v1 >= 1)   # positional constraints
+    m.addConstr(np.diag(b3) @ x  @ v1 >= 1)   # minimum for DK/FD
+    m.addConstr(np.diag(ss) @ x  @ v1 >= 1)    
+    m.addConstr(np.diag(of) @ x  @ v1 >= 3) 
+
+    m.addConstr(np.diag(c) @ x  @ v1 <= no_c) 
     m.addConstr(np.diag(b1) @ x  @ v1 <= no_1b)  # positional constraints 
     m.addConstr(np.diag(b2) @ x  @ v1 <= no_2b) 
     m.addConstr(np.diag(b3) @ x  @ v1 <= no_3b) 
@@ -189,7 +195,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':1, 'FD':150}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters

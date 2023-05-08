@@ -37,10 +37,9 @@ def create_base(nparr):  # create basis vector from positions
     return tmplst
     
 def rename(df, app):  # rename columns from merging protocol
-    return df.rename(['Player Name_'+app: 'Player Name' ,'Pos_'+app: 'Pos',
-    'Salary_'+app: 'Salary','Team_'+app: 'Team','Opp_'+app: 'Opp',
+    return df.rename({'Pos_'+app: 'Pos','Salary_'+app: 'Salary',
     'Batting Order (Confirmed)_'+app: 'Batting Order (Confirmed)',
-    'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP']}
+    'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP'})
     
 def frame_maker(date, numg): # format data frames, cut away fat
     #need to process DK and FD frames separately at first
@@ -64,10 +63,20 @@ def frame_maker(date, numg): # format data frames, cut away fat
     hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
 
     df = pd.concat([pdf, hdf])
-    df['Pos'] = df['Pos'].str.split('/').str[0]  # for multi-pos players choose 1st pos
-    df = df[df['Proj FP']>0]       # 0 is a bad fantasy score to use
-
-    teamlist = team_sampler(df, int(numg))  # (FD/DK both use games dictated by DK)
+    print(df.columns)
+    for colname in ['Player Name', 'Team', 'Opp']: # get rid of columnar dupes
+        if not df[colname+'_x'].equals(df[colname+'_y']): 
+            print(colname+' not equal.') 
+            sys.exit()
+        print(colname+'_y')
+        df = df.drop(colname+'_y', axis=1).rename({colname+'_x': colname})
+    print(df.columns)
+    df['Pos_x'] = df['Pos_x'].str.split('/').str[0]#for multi-pos players choose 1st pos
+    df['Pos_y'] = df['Pos_y'].str.split('/').str[0]#for multi-pos players choose 1st pos
+    df = df[df['Proj FP_x']>0]       # 0 is a bad fantasy score to use
+    df = df[df['Proj FP_y']>0]       # 0 is a bad fantasy score to use
+    
+    teamlist = team_sampler(df, int(numg))  
     df = df[df['Team'].isin(teamlist)]
     
     return df, teamlist
@@ -171,7 +180,7 @@ def main():
     date, no_games, max_stck, overlap = sys.argv[1:]
     rosters = []
     q = 0
-    stacks = [[5 2], [4 3], [3 3]]
+    stacks = [[5,2], [4,3], [3,3]]
     params = {'B': float(50000),'stacks': stacks[q],  
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 

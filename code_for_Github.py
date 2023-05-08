@@ -39,7 +39,7 @@ def create_base(nparr):  # create basis vector from positions
 def rename(df, app):  # rename columns from merging protocol
     return df.rename({'Pos_'+app: 'Pos','Salary_'+app: 'Salary',
     'Batting Order (Confirmed)_'+app: 'Batting Order (Confirmed)',
-    'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP'})
+    'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP'}, axis=1)
     
 def frame_maker(date, numg): # format data frames, cut away fat
     #need to process DK and FD frames separately at first
@@ -63,14 +63,13 @@ def frame_maker(date, numg): # format data frames, cut away fat
     hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
 
     df = pd.concat([pdf, hdf])
-    print(df.columns)
+
     for colname in ['Player Name', 'Team', 'Opp']: # get rid of columnar dupes
         if not df[colname+'_x'].equals(df[colname+'_y']): 
             print(colname+' not equal.') 
             sys.exit()
-        print(colname+'_y')
-        df = df.drop(colname+'_y', axis=1).rename({colname+'_x': colname})
-    print(df.columns)
+        df = df.drop(colname+'_y', axis=1).rename({colname+'_x': colname},axis=1)
+
     df['Pos_x'] = df['Pos_x'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df['Pos_y'] = df['Pos_y'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df = df[df['Proj FP_x']>0]       # 0 is a bad fantasy score to use
@@ -187,9 +186,9 @@ def main():
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
     no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
-    
-    frame = rename(df, 'x')
-    masks = mask_maker(frame, teams, params['maxst'])
+
+    frame = rename(df, 'x')         # find top DK rosters
+    masks = mask_maker(frame, teams)
     while len(rosters) < no_rosters['DK']:  #get DraftKings rosters
         soln=solver(frame, masks, params, limits, rosters, 'DK')
         if len(soln) == 0: q+=1; params['stacks'] = stacks[q]
@@ -197,7 +196,7 @@ def main():
         #print(i)
         #print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
-    frame = rename(date, 'y')
+    frame = rename(date, 'y')        # find top FD rosters
     params['B'] = float(35000) 
     limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_c1b': 2,'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
     masks = mask_maker(frame, teams, params['maxst'])

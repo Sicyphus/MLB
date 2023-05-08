@@ -140,9 +140,9 @@ def solver(df, m, params, limits, rosters, platform):
     i = 0  # order counter
     for tbarr in teambool: 
         m.addConstr(stacks[0]*(np.diag(tbarr) @ np.diag(p) @ x @ v1) + np.diag(tbarr) @ np.diag(h) @ x @ v1 <= stacks[0])    # no opposing pitchers / only a max of mst hitters
-        for od in st:          # consecutive batters constraint
-           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(od) @ x @ v1 >= stacks[0]*v[i])
-           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(od) @ x @ v1 >= stacks[1]*w[i])
+        for odx in range(len(st)):          # consecutive batters constraint
+           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stacks[0]][odx]) @ x @ v1 >= stacks[0]*v[i])
+           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stacks[1]][odx]) @ x @ v1 >= stacks[1]*w[i])
            i += 1
            
     m.addConstr(sum(v) >= 1)    # ensure at least 1 team w order constraint 1

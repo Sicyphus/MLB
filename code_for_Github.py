@@ -187,7 +187,7 @@ def solver(df, m, params, limits, rosters, platform):
     return solution
  
 def main():
-    date, no_games, max_stck, overlap = sys.argv[1:]
+    date, no_games, overlap = sys.argv[1:]
     q = 0
     rosters = []
     stacks = [[5,2], [4,3], [3,3]]
@@ -195,7 +195,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':1, 'FD':150}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -206,7 +206,7 @@ def main():
         else: rosters.append(soln)
         print(len(rosters))
         print(stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
+        #print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
     frame = rename(df, 'y')        # find top FD rosters
     params['B'] = float(35000) 
@@ -218,7 +218,7 @@ def main():
         else: rosters.append(soln)
         print(len(rosters))
         print(stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
+        #print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
     grader(frame, rosters, sys.argv[2:])#,
     

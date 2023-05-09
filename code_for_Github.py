@@ -220,7 +220,7 @@ def main():
         print(stacks[q])
         #print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
-    grader(frame, rosters, sys.argv[2:])#,
+    grader(frame, rosters, sys.argv[1:])#,
     
 if __name__ == "__main__":
     main()

@@ -134,7 +134,7 @@ def main():
     frame = rename(df, 'x')         # find top DK rosters
     masks = mask_maker(frame, teams)
     while len(rosters) < no_rosters['DK']:  #get DraftKings rosters
-        soln=solver.gplsol(frame, masks, params, limits, rosters, 'DK')  # alternative: gurobi   
+        soln=solver.glp(frame, masks, params, limits, rosters, 'DK')  # alternative: gurobi   
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print(len(rosters))
@@ -146,7 +146,7 @@ def main():
     limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_c1b': 2,'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
     masks = mask_maker(frame, teams)
     while len(rosters) < no_rosters['FD'] + no_rosters['DK']: #get FanDuel rosters
-        soln=solver.gplsol(frame, masks, params, limits, rosters,'FD')   # alternative: gurobi
+        soln=solver.glp(frame, masks, params, limits, rosters,'FD')   # alternative: gurobi
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print(len(rosters))

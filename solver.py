@@ -1,5 +1,6 @@
 import numpy as np , gurobipy as gp
 from gurobipy import GRB
+from pyomo.environ import *
     
 def gurobi(df, m, params, limits, rosters, platform):
     #need to adjust constraints for FD
@@ -132,6 +133,8 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     #m.setObjective(pr @ x, GRB.MAXIMIZE)        #objective function
     #m.optimize()
+
+    model.value = Objective(expr = sum( v[i]*model.x[i] for i in model.ITEMS ),sense = maximize )
 
     optimizer=SolverFactory('glpk').solve(model)
     #model.display()

@@ -3,7 +3,12 @@ import pandas as pd
 overlap = 5
 df = pd.read_csv('data/DFN MLB Hitters FD 4_28.csv')
 df_dict = df.set_index('Player Name').to_dict()
-rosters = [len(df)*[1],len(df)*[0]]
+tep = len(df)*[0];tep[0]=1;tep[1]=1;tep[2]=1;tep[3]=1;tep[4]=1
+teambool0 = len(df)*[0]; 
+for i in range(len(df['Team'])):
+    if df['Team'][i]=='CHC': teambool0[i]=1
+teambool=[teambool0,teambool0]
+rosters = [tep, tep]; 
 v = df_dict['Proj FP']
 c = df_dict['Salary']
 B = 50000
@@ -11,14 +16,24 @@ model = ConcreteModel()
 model.ITEMS = df['Player Name'].to_list()
 model.x = Var( model.ITEMS, within=Binary )
 
+model.teams = ConstraintList()
+#model.order = ConstraintList()
+i = 0  # order counter
+for tbarr in teambool: 
+        tbarr = dict(zip(df['Player Name'],tbarr))
+        model.teams.add(expr = sum(tbarr[i] * model.x[i] )  <= 3)    # no opposing pitchers / only a max of mst hitters
+        #for odx in range(len(st[stack[0]])):          # consecutive batters constraint
+           #m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[0]][odx]) @ x @ v1 >= stack[0]*v[i])
+           #m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[1]][odx]) @ x @ v1 >= stack[1]*w[i])
+           #i += 1
 for sl in rosters:
-    print(1111)
     rl = dict(zip(df['Player Name'],sl))
-    model.overlap = Constraint(expr =  )
-def roster_overlap(model, i):
-    return sum( rl[i-1]*model.x[i] for i in model.ITEMS ) <= overlap
+    model.overlap.add(expr = sum( rl[i]*model.x[i] for i in model.ITEMS ) <= overlap)
 
-model.Co1 = pyo.Constraint(rule=Co1)
+model.overlap = ConstraintList()
+for sl in rosters:
+    rl = dict(zip(df['Player Name'],sl))
+    model.overlap.add(expr = sum( rl[i]*model.x[i] for i in model.ITEMS ) <= overlap)
 
 model.budget = Constraint(expr = sum( c[i]*model.x[i] for i in model.ITEMS ) <= B )
 
@@ -29,7 +44,7 @@ optimizer=SolverFactory('glpk').solve(model)
 #model.display()
 x = [model.x[i].value for i in model.x]
 if None in x: x = []
-
+#print(x)
 
 
 '''

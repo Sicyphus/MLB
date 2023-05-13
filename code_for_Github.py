@@ -128,7 +128,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -137,9 +137,8 @@ def main():
         soln=solver.glp(frame, masks, params, limits, rosters, 'DK')  # alternative: gurobi   
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
-        print(len(rosters))
-        print(stacks[q])
-        #print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
+        print([len(rosters)]+stacks[q])
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
     frame = rename(df, 'y')        # find top FD rosters
     params['B'] = float(35000) 
@@ -149,9 +148,8 @@ def main():
         soln=solver.glp(frame, masks, params, limits, rosters,'FD')   # alternative: gurobi
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
-        print(len(rosters))
-        print(stacks[q])
-        #print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
+        print([len(rosters)]+stacks[q])
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
         
     grader(frame, rosters, sys.argv[1:])#,
     

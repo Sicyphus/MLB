@@ -93,9 +93,10 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     model = ConcreteModel()
     model.ITEMS = df['Name_Team'].to_list()
+    model.ORDERS = range(len(teambool)*len(st[stack[0]]))
     model.x = Var( model.ITEMS, within=Binary )
-    #v = m.addMVar(len(teambool)*len(st[stack[0]]),vtype=GRB.BINARY)#ensures consecutive
-    #w = m.addMVar(len(teambool)*len(st[stack[1]]),vtype=GRB.BINARY)#hitters
+    model.v = Var(model.ORDERS, within=Binary)#ensures consecutive
+    model.w = Var(model.ORDERS, within=Binary)#hitters
 
     #Setup Constraints
     model.budget = Constraint(expr = sum( d[i]*model.x[i] for i in model.ITEMS ) <= B )
@@ -103,13 +104,17 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     model.pitch = Constraint(expr = sum(p[i]*model.x[i] for i in model.ITEMS) == nptch)           #  num pitchers
     model.hit = Constraint(expr = sum(h[i]*model.x[i] for i in model.ITEMS) == nhit)           #  num hitters
 
-    i = 0  # order counter
-    #for tbarr in teambool: 
-    #    m.addConstr(stack[0]*(np.diag(tbarr) @ np.diag(p) @ x @ v1) + np.diag(tbarr) @ np.diag(h) @ x @ v1 <= stack[0])    # no opposing pitchers / only a max of mst hitters
+    k = 0  # order counter
+    model.teams = ConstraintList()
+    model.vorder = ConstraintList()
+    model.worder = ConstraintList()
+    for tbarr in teambool: 
+        tb = dictry(df, tbarr)
+        model.teams.add(sum(stack[0]*tbarr[i]*p[i]*x[i] + tbarr[i]*h[i]*x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
     #    for odx in range(len(st[stack[0]])):          # consecutive batters constraint
     #       m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[0]][odx]) @ x @ v1 >= stack[0]*v[i])
            #m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[1]][odx]) @ x @ v1 >= stack[1]*w[i])
-    #       i += 1
+    #       k += 1
 
     #m.addConstr(sum(v) >= 1)    # ensure at least 1 team w order constraint 1
     #m.addConstr(sum(w) >= 1)    # ensure at least 1 team w order constraint 2

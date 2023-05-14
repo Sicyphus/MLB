@@ -33,13 +33,13 @@ def gurobi(df, m, params, limits, rosters, platform):
     m.addConstr(np.diag(p) @ x @ v1 == nptch)           #  num pitchers
     m.addConstr(np.diag(h) @ x @ v1 == nhit)           #  num hitters
 
-    i = 0  # order counter
+    k = 0  # order counter
     for tbarr in teambool: 
         m.addConstr(stack[0]*(np.diag(tbarr) @ np.diag(p) @ x @ v1) + np.diag(tbarr) @ np.diag(h) @ x @ v1 <= stack[0])    # no opposing pitchers / only a max of mst hitters
         for odx in range(len(st[stack[0]])):          # consecutive batters constraint
-           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[0]][odx]) @ x @ v1 >= stack[0]*v[i])
-           #m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[1]][odx]) @ x @ v1 >= stack[1]*w[i])
-           i += 1
+           m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[0]][odx]) @ x @ v1 >= stack[0]*v[k])
+           #m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[1]][odx]) @ x @ v1 >= stack[1]*w[k])
+           k += 1
 
     m.addConstr(sum(v) >= 1)    # ensure at least 1 team w order constraint 1
     #m.addConstr(sum(w) >= 1)    # ensure at least 1 team w order constraint 2
@@ -72,13 +72,15 @@ def gurobi(df, m, params, limits, rosters, platform):
  
 def dctry(frm, lst): return dict(zip(frm['Name_Team'],lst))    
 
+#def dctry():
+
 def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable gplsol)
     #need to adjust constraints for FD
     # adjust graming for FD (make sure they all have same indices)
     #order constraint not working sometimes
     #SUCCESSive order constraints for when things run out
     # convert dictionary to actual variable names
-    p, h, teambool, st = dctry(df,m['p']), dctry(df,m['h']), dctry(df,m['tb']), dctry(df,m['st'])
+    p, h, teambool, st = dctry(df,m['p']), dctry(df,m['h']), m['tb'], m['st']
     c, b1, b2 = dctry(df,m['c']), dctry(df,m['b1']) , dctry(df,m['b2'])
     b3, ss, of = dctry(df,m['b3']), dctry(df,m['ss']), dctry(df,m['of'])
     B, stack, overlap = params['B'], params['stack'], params['overlap']
@@ -93,10 +95,10 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     model = ConcreteModel()
     model.ITEMS = df['Name_Team'].to_list()
-    model.ORDERS = range(len(teambool)*len(st[stack[0]]))
+    #model.ORDERS = range(len(teambool)*len(st[stack[0]]))
     model.x = Var( model.ITEMS, within=Binary )
-    model.v = Var(model.ORDERS, within=Binary)#ensures consecutive
-    model.w = Var(model.ORDERS, within=Binary)#hitters
+    #model.v = Var(model.ORDERS, within=Binary)#ensures consecutive
+    #model.w = Var(model.ORDERS, within=Binary)#hitters
 
     #Setup Constraints
     model.budget = Constraint(expr = sum( d[i]*model.x[i] for i in model.ITEMS ) <= B )
@@ -109,11 +111,11 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     model.vorder = ConstraintList()
     model.worder = ConstraintList()
     for tbarr in teambool: 
-        tb = dictry(df, tbarr)
-        model.teams.add(sum(stack[0]*tbarr[i]*p[i]*x[i] + tbarr[i]*h[i]*x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
-    #    for odx in range(len(st[stack[0]])):          # consecutive batters constraint
-    #       m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[0]][odx]) @ x @ v1 >= stack[0]*v[i])
-           #m.addConstr(np.diag(tbarr) @ np.diag(h) @ np.diag(st[stack[1]][odx]) @ x @ v1 >= stack[1]*w[i])
+        tb = dctry(df, tbarr)
+        model.teams.add(sum(stack[0]*tb[i]*p[i]*model.x[i] + tb[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
+        for odx in range(len(st[stack[0]])):          # consecutive batters constraint
+           model.vorder.add(sum(st[stack[0]][odx]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*v[i])
+           model.worder.add(sum(st[stack[1]][odx]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*w[i])
     #       k += 1
 
     #m.addConstr(sum(v) >= 1)    # ensure at least 1 team w order constraint 1

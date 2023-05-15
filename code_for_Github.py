@@ -123,12 +123,12 @@ def main():
     date, no_games, overlap = sys.argv[1:]
     q = 0
     rosters = []
-    stacks = [[5,3], [4,4], [4,3],[3,3],[3,2]]
+    stacks = [[5,3],[4,4], [4,3],[3,3],[3,2]]
     params = {'B': float(50000),'stack': stacks[q],  
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters

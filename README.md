@@ -1,5 +1,5 @@
 Fantasy Hockey IP Code
-=======================
+======================
 
 This is the code for the paper [Picking Winners Using Integer Programming](http://arxiv.org/pdf/1604.01455v2.pdf) by [David Hunter](http://orc.scripts.mit.edu/people/student.php?name=dshunter), [Juan Pablo Vielma](http://www.mit.edu/~jvielma/), and [Tauhid Zaman](http://zlisto.scripts.mit.edu/home/). Below are details on the required software, and instructions on how to run different variations of the code. 
 

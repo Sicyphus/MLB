@@ -107,22 +107,23 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     model.hit = Constraint(expr = sum(h[i]*model.x[i] for i in model.ITEMS) == nhit)           #  num hitters
 
     k = 0  # order counter
-    model.teams = ConstraintList()
-    model.vorder = ConstraintList()
-    model.worder = ConstraintList()
+    model.teams = ConstraintList(); 
+    model.vorder = ConstraintList(); model.worder = ConstraintList(); model.vwcross = ConstraintList()
+    model.vwtot = ConstraintList()
     for tbarr in teambool: 
         tb = dctry(df, tbarr)
+        k_ = k    # keep track of first order index for current team
         model.teams.add(sum(stack[0]*tb[i]*p[i]*model.x[i] + tb[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
         for odx in range(len(st[stack[0]])):          # consecutive batters constraint
-            sx = dctry(df, st[stack[0]][odx])
-            print(sx)
-            model.vorder.add(sum(sx[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*model.v[k])
-            model.worder.add(sum(sx[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*model.w[k])
+            sx0 = dctry(df, st[stack[0]][odx])
+            sx1 = dctry(df, st[stack[1]][odx])
+            model.vorder.add(expr = sum(sx0[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*model.v[k])
+            model.worder.add(expr = sum(sx1[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*model.w[k])
             k += 1
+        model.vwtot.add(expr = sum(model.v[l]+model.w[l]  for l in range(k_,k)) <= 1) # make sure v/w distinct
 
-    #m.addConstr(sum(v) >= 1)    # ensure at least 1 team w order constraint 1
-    #m.addConstr(sum(w) >= 1)    # ensure at least 1 team w order constraint 2
-    #m.addConstr(v @ w == 0)     # make sure order constraints distinct
+    model.vsum = Constraint(expr = sum(model.v[i] for i in model.ORDERS) >= 1)    # ensure at least 1 team w order constraint 1
+    model.wsum = Constraint(expr = sum(model.w[i] for i in model.ORDERS) >= 1)    # ensure at least 1 team w order constraint 2
            
     model.cb_ = Constraint(expr = sum(c[i]*model.x[i] + b1[i]*model.x[i] for i in model.ITEMS) >= 1)# c/1b <=2 (FD)
     model.b2_ = Constraint(expr = sum(b2[i]*model.x[i] for i in model.ITEMS) >= 1)   # positional constraints
@@ -148,7 +149,11 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     optimizer=SolverFactory('glpk').solve(model)
     #model.display()
-    x = np.array([int(model.x[i].value) for i in model.x])
+    x = []
+    for i in model.x:
+        if model.x[i].value == None: return np.array([])
+        x.append(int(model.x[i].value) )
+    x = np.array(x)
     if None in x: x = []
     
     return x

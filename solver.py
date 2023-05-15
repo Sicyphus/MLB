@@ -95,10 +95,10 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     model = ConcreteModel()
     model.ITEMS = df['Name_Team'].to_list()
-    #model.ORDERS = range(len(teambool)*len(st[stack[0]]))
+    model.ORDERS = range(len(teambool)*len(st[stack[0]]))
     model.x = Var( model.ITEMS, within=Binary )
-    #model.v = Var(model.ORDERS, within=Binary)#ensures consecutive
-    #model.w = Var(model.ORDERS, within=Binary)#hitters
+    model.v = Var(model.ORDERS, within=Binary)#ensures consecutive
+    model.w = Var(model.ORDERS, within=Binary)#hitters
 
     #Setup Constraints
     model.budget = Constraint(expr = sum( d[i]*model.x[i] for i in model.ITEMS ) <= B )
@@ -114,9 +114,11 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
         tb = dctry(df, tbarr)
         model.teams.add(sum(stack[0]*tb[i]*p[i]*model.x[i] + tb[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
         for odx in range(len(st[stack[0]])):          # consecutive batters constraint
-           model.vorder.add(sum(st[stack[0]][odx]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*v[i])
-           model.worder.add(sum(st[stack[1]][odx]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*w[i])
-    #       k += 1
+            sx = dctry(df, st[stack[0]][odx])
+            print(sx)
+            model.vorder.add(sum(sx[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*model.v[k])
+            model.worder.add(sum(sx[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*model.w[k])
+            k += 1
 
     #m.addConstr(sum(v) >= 1)    # ensure at least 1 team w order constraint 1
     #m.addConstr(sum(w) >= 1)    # ensure at least 1 team w order constraint 2

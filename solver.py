@@ -1,4 +1,4 @@
-import numpy as np , gurobipy as gp
+import numpy as np , gurobipy as gp, time
 from gurobipy import GRB
 from pyomo.environ import *
     
@@ -71,8 +71,6 @@ def gurobi(df, m, params, limits, rosters, platform):
     return solution
  
 def dctry(frm, lst): return dict(zip(frm['Name_Team'],lst))    
-
-#def dctry():
 
 def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable gplsol)
     #need to adjust constraints for FD
@@ -147,11 +145,13 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     model.value = Objective(expr = sum( pr[i]*model.x[i] for i in model.ITEMS ),sense = maximize )
 
+    curtime = time.time()
+
     optimizer=SolverFactory('glpk').solve(model)
     #model.display()
     x = []
     for i in model.x:
-        if model.x[i].value == None: return np.array([])
+        if model.x[i].value == None or time.time()-curtime > 180: return np.array([])
         x.append(int(model.x[i].value) )
     x = np.array(x)
     if None in x: x = []

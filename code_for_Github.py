@@ -30,6 +30,17 @@ def team_sampler(dframe, n): # get sample of n teams from team list
         else: opps.append(opp[0].replace('@',''))
     return selecteams+opps
 
+def team_fromfile(date):
+    df1 = pd.read_csv('platform/DKSalaries{}.csv'.format(date))
+    df2 = pd.read_csv('platform/FDSalaries{}.csv'.format(date))
+    allteams1 = df1['Teams'].to_list()
+    allteams2 = df2['Teams'].to_list()
+    if set(allteams1) != set(allteams2):
+        print('Team slate for DK/FD not same.  Exiting...')
+        sys.exit()
+    else: 
+        return allteams1
+    
 def printframe(dframe, cols):    
     for i in range(len(dframe)):
         print(dframe.iloc[i][cols])
@@ -79,7 +90,8 @@ def frame_maker(date, numg): # format data frames, cut away fat
     df = df[df['Proj FP_x']>0]       # 0 is a bad fantasy score to use
     df = df[df['Proj FP_y']>0]       # 0 is a bad fantasy score to use
     
-    teamlist = team_sampler(df, int(numg))  
+    if n == 0: teamlist = team_fromfile(date)  # same day game slate option
+    else: teamlist = team_sampler(df, int(numg))  # get random slate  
     df = df[df['Team'].isin(teamlist)]
     
     return df, teamlist
@@ -118,7 +130,15 @@ def mask_maker(df, teamlist):
     m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'st': st}     
     return m
 
+def output(name, date, rostnum, platform):
+    if rostnum == 1: os.system('rm -rf platform/*Rosters*{}*'.format(date))  #reset file if first rodeo
+    filehdl = open('{}Rosters{}.csv'.format(platform, date), 'a')
 
+    plframe = pd.read_csv('platform/{}Salaries{}.csv'.format(platform, date))
+    plframe['Name_Team'] = plframe['Player Name'] + '_' + plframe['Team']
+    
+    filehdl.close()
+    
 def main():
     date, no_games, overlap = sys.argv[1:]
     q = 0
@@ -128,7 +148,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -139,6 +159,7 @@ def main():
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
         print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
+        output(frame.loc[soln==1]['Name_Team'], date, len(rosters), 'DK')
         
     frame = rename(df, 'y')        # find top FD rosters
     params['B'] = float(35000) 
@@ -150,6 +171,7 @@ def main():
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
         print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Confirmed)']])
+        output(frame.loc[soln==1]['Name_Team'], date, len(rosters), 'FD')
         
     grader(frame, rosters, sys.argv[1:])#,
     

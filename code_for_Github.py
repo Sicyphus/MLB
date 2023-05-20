@@ -147,23 +147,26 @@ def mask_maker(df, teamlist):
     return m
 
 def output(name_col, date, rostnum, platform):
-    if rostnum == 1: os.system('rm -rf platform/*Rosters*{}*'.format(date))  #reset file if first rodeo
-    filehdl = open('{}Rosters{}.csv'.format(platform, date), 'a')
+    if rostnum == 1: 
+        os.system('rm -rf platform/*Rosters*{}*'.format(date))  # reset file if first rodeo
+        open('{}Rosters{}.csv'.format('DK', date), 'a').write('P,P,C,1B,2B,3B,SS,OF,OF,OF')
+        open('{}Rosters{}.csv'.format('FD', date), 'a').write('P,C/1B,2B,3B,SS,OF,OF,OF,UTIL') 
 
     plframe = pd.read_csv('platform/{}Salaries{}.csv'.format(platform, date))
     names = (platform=='DK')*'Name'+(platform=='FD')*'Nickname'
     teams = (platform=='DK')*'TeamAbbrev'+(platform=='FD')*'Team'
     plframe['Name_Team'] = plframe[names].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + plframe[teams]
-    plframe.to_csv('/tmp/;p')
-    for name in name_col:
-        print(plframe['Name_Team'].to_list())
-        if name not in plframe['Name_Team']:
-            print("Error: Name {} not found".format(name))
+
+    for name in name_col.to_list():
+        match = plframe[plframe['Name_Team'] == name]
+        if len(match) == 0:
+            print('Warning: {} not found'.format(name))
+            filehdl.write(match)
             sys.exit()
         #else:
             
     
-    filehdl.close()
+    #filehdl.close()
     
 def main():
     date, no_games, overlap = sys.argv[1:]

@@ -52,10 +52,14 @@ def printframe(dframe, cols):
         print(dframe.iloc[i][cols])
 
 def name_proc(frm):
-    frm_col = frm['Player Name'] + '_' + frm['Team']
-    deleted = [' jr',' sr',r'^\s+',r'\.']
+    frm_col = frm['Player Name'].str.lower() + '_' + frm['Team']
+    deleted = [' jr',' sr',r'\s+',r'\.']
     for d in deleted: 
-        frm_col = frm_col(regex=True, inplace=True, to_replace=d, value=r'')
+        print(frm_col)
+        print(d)
+        frm_col.replace(regex=True, inplace=True, to_replace=d, value=r'')
+        print(frm_col) 
+        print(';;;;;;;;;;')    
     return frm_col
 
 def create_base(nparr):  # create basis vector from positions
@@ -65,8 +69,8 @@ def create_base(nparr):  # create basis vector from positions
     return tmplst
     
 def rename(df, app):  # rename columns from merging protocol
-    return df.rename({'Player Name_'+app,'Team_'+app,'Opp_'+app,'Pos_'+app: 'Pos','Salary_'+app: 'Salary',
-    'Batting Order (Projected)_'+app: 'Batting Order (Projected)',
+    return df.rename({'Player Name_'+app: 'Player Name','Team_'+app: 'Team', 'Opp_'+app: 'Opp',
+    'Pos_'+app: 'Pos','Salary_'+app: 'Salary', 'Batting Order (Projected)_'+app: 'Batting Order (Projected)',
     'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP'}, axis=1)
     
 def frame_maker(date, numg): # format data frames, cut away fat
@@ -121,8 +125,10 @@ def mask_maker(df, teamlist):
     of = col_to_npbool(df,'Pos','OF')   # outfielder mask
 
     tb = []               # team masks
+    ob = []               # opponent masks
     for team in teamlist:     
         tb.append(col_to_npbool(df,'Team',team))
+        ob.append(col_to_npbool(df,'Team',team))                   # team opponent
     
     st = {2:[], 3: [], 4: [] , 5: []}  # stacking masks
     for n in [2, 3, 4, 5]:  # n is consecutive number of batters
@@ -134,7 +140,7 @@ def mask_maker(df, teamlist):
             st[n].append(stemp)
     
     #masks in dict for easier transport 
-    m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'st': st}     
+    m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'ob':ob,'st': st}     
     return m
 
 def output(rframe, date, rostnum, platform):

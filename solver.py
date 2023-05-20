@@ -78,7 +78,7 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     #order constraint not working sometimes
     #SUCCESSive order constraints for when things run out
     # convert dictionary to actual variable names
-    p, h, teambool, st = dctry(df,m['p']), dctry(df,m['h']), m['tb'], m['st']
+    p, h, teambool, ob, st = dctry(df,m['p']), dctry(df,m['h']), m['tb'], m['ob'], m['st']
     c, b1, b2 = dctry(df,m['c']), dctry(df,m['b1']) , dctry(df,m['b2'])
     b3, ss, of = dctry(df,m['b3']), dctry(df,m['ss']), dctry(df,m['of'])
     B, stack, overlap = params['B'], params['stack'], params['overlap']
@@ -111,7 +111,8 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     for tbarr in teambool: 
         tb = dctry(df, tbarr)
         k_ = k    # keep track of first order index for current team
-        model.teams.add(sum(stack[0]*tb[i]*p[i]*model.x[i] + tb[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
+        model.teams.add(sum(tb[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # only a max of mst hitters
+        model.teams.add(sum(stack[0]*tb[i]*p[i]*model.x[i] + ob[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
         for odx in range(len(st[stack[0]])):          # consecutive batters constraint
             sx0 = dctry(df, st[stack[0]][odx])
             sx1 = dctry(df, st[stack[1]][odx])

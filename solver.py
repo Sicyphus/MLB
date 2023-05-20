@@ -86,7 +86,7 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     no_c, no_1b, no_c1b, no_2b = limits['no_c'], limits['no_1b'], limits['no_c1b'], limits['no_2b']
     no_3b, no_ss, no_of = limits['no_3b'], limits['no_ss'], limits['no_of']   
     df_dict = df.set_index('Name_Team').to_dict()    # pyomo likes dictionaries instead of frames
-    
+
     pr = df_dict['Proj FP']
 
     d = df_dict['Salary']  #cost vector

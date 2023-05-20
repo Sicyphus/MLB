@@ -52,8 +52,10 @@ def printframe(dframe, cols):
         print(dframe.iloc[i][cols])
 
 def name_proc(frm):
-    frm_col = frm['Player Name'].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','')
-    frm_col = frm_col.str.replace('.','') + '_' + frm['Team']
+    frm_col = frm['Player Name'] + '_' + frm['Team']
+    deleted = [' jr',' sr',r'^\s+',r'\.']
+    for d in deleted: 
+        frm_col = frm_col(regex=True, inplace=True, to_replace=d, value=r'')
     return frm_col
 
 def create_base(nparr):  # create basis vector from positions
@@ -63,7 +65,7 @@ def create_base(nparr):  # create basis vector from positions
     return tmplst
     
 def rename(df, app):  # rename columns from merging protocol
-    return df.rename({'Pos_'+app: 'Pos','Salary_'+app: 'Salary',
+    return df.rename({'Player Name_'+app,'Team_'+app,'Opp_'+app,'Pos_'+app: 'Pos','Salary_'+app: 'Salary',
     'Batting Order (Projected)_'+app: 'Batting Order (Projected)',
     'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP'}, axis=1)
     
@@ -80,26 +82,15 @@ def frame_maker(date, numg): # format data frames, cut away fat
     hdf2 = hdf2[['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)','Proj FP','Actual FP']]
     hdf2 = hdf2[hdf2['Batting Order (Projected)'] != 'x']    #only confirmed ordered batters
     
-    pdf1['Name_Team'] = pdf1['Player Name'].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + pdf1['Team']
-    pdf2['Name_Team'] = pdf2['Player Name'].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + pdf2['Team']
-    hdf1['Name_Team'] = hdf1['Player Name'].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + hdf1['Team']
-    hdf2['Name_Team'] = hdf2['Player Name'].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + hdf2['Team']
+    pdf1['Name_Team'] = name_proc(pdf1)
+    pdf2['Name_Team'] = name_proc(pdf2)
+    hdf1['Name_Team'] = name_proc(hdf1)
+    hdf2['Name_Team'] = name_proc(hdf2)
     
     pdf = pd.merge(pdf1, pdf2, how = 'inner', on = 'Name_Team')  # fasten FD/DK together
     hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
 
     df = pd.concat([pdf, hdf])
-
-    for colname in ['Player Name', 'Team', 'Opp']: # get rid of columnar dupes
-        #b=set(df[colname+'_x'].to_list())
-        #a=set(df[colname+'_y'].to_list())
-        #print((a|b)-(a&b))
-        #print(len(a&b))
-        #print(len(a|b))
-        #if not df[colname+'_x'].equals(df[colname+'_y']): 
-        #    print(colname+' not equal.') 
-        #    sys.exit()
-        df = df.drop(colname+'_y', axis=1).rename({colname+'_x': colname},axis=1)
 
     df['Pos_x'] = df['Pos_x'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df['Pos_y'] = df['Pos_y'].str.split('/').str[0]#for multi-pos players choose 1st pos
@@ -146,29 +137,56 @@ def mask_maker(df, teamlist):
     m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'st': st}     
     return m
 
-def output(name_col, date, rostnum, platform):
+def output(rframe, date, rostnum, platform):
     if rostnum == 1: 
         os.system('rm -rf platform/*Rosters*{}*'.format(date))  # reset file if first rodeo
-        open('{}Rosters{}.csv'.format('DK', date), 'a').write('P,P,C,1B,2B,3B,SS,OF,OF,OF')
-        open('{}Rosters{}.csv'.format('FD', date), 'a').write('P,C/1B,2B,3B,SS,OF,OF,OF,UTIL') 
+        open('platform/{}Rosters{}.csv'.format('DK', date), 'w').write('P,P,C,1B,2B,3B,SS,OF,OF,OF\n')  # output titles
+        open('platform/{}Rosters{}.csv'.format('FD', date), 'w').write('P,C/1B,2B,3B,SS,OF,OF,OF,UTIL\n') 
 
-    plframe = pd.read_csv('platform/{}Salaries{}.csv'.format(platform, date))
-    names = (platform=='DK')*'Name'+(platform=='FD')*'Nickname'
+    filehdl = open('platform/{}Rosters{}.csv'.format(platform, date), 'a')
+    plframe = pd.read_csv('platform/{}Salaries{}.csv'.format(platform, date))  # get todays platform data
+    
+    names = (platform=='DK')*'Name'+(platform=='FD')*'Nickname'  # make new name/team column for matching
     teams = (platform=='DK')*'TeamAbbrev'+(platform=='FD')*'Team'
+    outid = (platform=='DK')*'ID'+(platform=='FD')*'Id'  # name used for outputfile
     plframe['Name_Team'] = plframe[names].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + plframe[teams]
 
-    for name in name_col.to_list():
-        match = plframe[plframe['Name_Team'] == name]
+    posdict = {'P':[],'C':[],'1B':[],'2B':[],'3B':[],'SS':[],'OF':[],'UTIL':[]}
+    
+    for i, row in rframe.iterrows():
+        nametm = row['Name_Team']  
+        match = plframe[plframe['Name_Team'] == nametm]
         if len(match) == 0:
             print('Warning: {} not found'.format(name))
-            filehdl.write(match)
-            sys.exit()
-        #else:
-            
+        pos = row['Pos']
+        if pos in ['P','RP','SP']: posdict['P'].append(match[outid].values[0])
+        if pos in ['C']: posdict['C'].append(match[outid].values[0])
+        if pos in ['1B']: posdict['1B'].append(match[outid].values[0])
+        if pos in ['2B']: posdict['2B'].append(match[outid].values[0])
+        if pos in ['3B']: posdict['3B'].append(match[outid].values[0])
+        if pos in ['SS']: posdict['SS'].append(match[outid].values[0])
+        if pos in ['OF']: posdict['OF'].append(match[outid].values[0])
+        
+    for strng in ['C','1B','2B','3B','SS']: # under any of these conditions, these are FD results
+        if len(posdict[strng]) > 1:         # therefore, put extra player in UTIL category
+           posdict['UTIL'] = [posdict[strng].pop()]
+    if len(posdict['OF']) > 3:
+           posdict['UTIL'] = [posdict['OF'].pop()]
+    if platform == 'FD' and len(posdict['C'])+len(posdict['1B']) ==2:
+           posdict['UTIL'] = [posdict['1B'].pop()]
     
-    #filehdl.close()
-    
+    for key in posdict.keys():        #   order to comply with platform csv standards
+        for idnum in posdict[key]:
+            filehdl.write(str(idnum)+',')
+    filehdl.write('\n')
+          
 def main():
+    #JESSE look over that delete loop above (deletes three columns...)
+    #      fix empty solutions
+    # opposing pitchers (not that bad)
+    # may need to delete or do womething with that teambool constraint
+    #problematic fanduel constraints
+    #regex
     date, no_games, overlap = sys.argv[1:]
     q = 0
     rosters = []
@@ -177,7 +195,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':2, 'FD':2}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -187,20 +205,21 @@ def main():
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Projected)']])
-        output(frame.loc[soln==1]['Name_Team'], date, len(rosters), 'DK')
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)']])
+        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), 'DK')
         
     frame = rename(df, 'y')        # find top FD rosters
     params['B'] = float(35000) 
     limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_c1b': 2,'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
     masks = mask_maker(frame, teams)
+    q = max(1, q)    # 5/3 stack invalid for FD
     while len(rosters) < no_rosters['FD'] + no_rosters['DK']: #get FanDuel rosters
         soln=solver.glp(frame, masks, params, limits, rosters,'FD')   # alternative: gurobi
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Batting Order (Projected)']])
-        output(frame.loc[soln==1]['Name_Team'], date, len(rosters), 'FD')
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)']])
+        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), 'FD')
         
     grader(frame, rosters, sys.argv[1:])#,
     

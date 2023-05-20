@@ -17,24 +17,25 @@ def grader(df, sol_matrix, basefilename):  # score results\output to file
             f.write(str(score)+',')
         f.write(str(scorecum))
 
-def team_sampler(dframe, n): # get sample of n teams from team list
+def team_sampler(dframe, n): # get sample of 2n teams from team list
     allteams = set(dframe['Team'].to_list())
     if len(allteams)/2 < n:
         print('Not enough games for total teams')
         sys.exit()
-    selecteams = random.sample(allteams, n)  # select n teams
+    selecteams = random.sample(allteams, n)  # select 2n teams
     opps = []
     for team in selecteams:  # for each team, find opponent and add to list
         opp = dframe[dframe['Team'] == team]['Opp'].to_list()
         if len(set(opp)) > 1: print('Warning: Opponent team ambiguity')
         else: opps.append(opp[0].replace('@',''))
+    print(selecteams+opps)
     return selecteams+opps
 
 def team_fromfile(date):
     df1 = pd.read_csv('platform/DKSalaries{}.csv'.format(date))
     df2 = pd.read_csv('platform/FDSalaries{}.csv'.format(date))
-    allteams1 = df1['TeamAbbrev'].to_list()
-    allteams2 = df2['Team'].to_list()
+    allteams1 = list(set(df1['TeamAbbrev'].to_list()))
+    allteams2 = list(set(df2['Team'].to_list()))
     team_trans = {'WSH':'WAS'}
     for i in range(len(allteams1)): 
         if allteams1[i] in team_trans.keys(): allteams1[i] = team_trans[allteams1[i]]
@@ -44,8 +45,7 @@ def team_fromfile(date):
         print('Warning: Team slate for DK/FD not same:')
         print((set(allteams1)|set(allteams2))-(set(allteams1)&set(allteams2)))
         time.sleep(4)
-    else: 
-        return allteams1
+    return allteams1
     
 def printframe(dframe, cols):    
     for i in range(len(dframe)):
@@ -54,8 +54,6 @@ def printframe(dframe, cols):
 def name_proc(frm):
     frm_col = frm['Player Name'].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','')
     frm_col = frm_col.str.replace('.','') + '_' + frm['Team']
-    print(frm_col)
-    import sys; sys.exit()
     return frm_col
 
 def create_base(nparr):  # create basis vector from positions
@@ -107,7 +105,7 @@ def frame_maker(date, numg): # format data frames, cut away fat
     df['Pos_y'] = df['Pos_y'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df = df[df['Proj FP_x']>0]       # 0 is a bad fantasy score to use
     df = df[df['Proj FP_y']>0]       # 0 is a bad fantasy score to use
-    df.to_csv('/tmp/lo')
+    
     if numg == '0': teamlist = team_fromfile(date)  # same day game slate option
     else: teamlist = team_sampler(df, int(numg))  # get random slate  
     df = df[df['Team'].isin(teamlist)]
@@ -156,11 +154,14 @@ def output(name_col, date, rostnum, platform):
     names = (platform=='DK')*'Name'+(platform=='FD')*'Nickname'
     teams = (platform=='DK')*'TeamAbbrev'+(platform=='FD')*'Team'
     plframe['Name_Team'] = plframe[names].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + plframe[teams]
-    
+    plframe.to_csv('/tmp/;p')
     for name in name_col:
+        print(plframe['Name_Team'].to_list())
         if name not in plframe['Name_Team']:
-            print("Error: Name {} not found")
+            print("Error: Name {} not found".format(name))
             sys.exit()
+        #else:
+            
     
     filehdl.close()
     

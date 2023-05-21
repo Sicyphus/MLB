@@ -78,7 +78,7 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     #order constraint not working sometimes
     #SUCCESSive order constraints for when things run out
     # convert dictionary to actual variable names
-    p, h, teambool, ob, st = dctry(df,m['p']), dctry(df,m['h']), m['tb'], m['ob'], m['st']
+    p, h, tb, ob, st = dctry(df,m['p']), dctry(df,m['h']), m['tb'], m['ob'], m['st']
     c, b1, b2 = dctry(df,m['c']), dctry(df,m['b1']) , dctry(df,m['b2'])
     b3, ss, of = dctry(df,m['b3']), dctry(df,m['ss']), dctry(df,m['of'])
     B, stack, overlap = params['B'], params['stack'], params['overlap']
@@ -93,7 +93,7 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     model = ConcreteModel()
     model.ITEMS = df['Name_Team'].to_list()
-    model.ORDERS = range(len(teambool)*len(st[stack[0]]))
+    model.ORDERS = range(len(tb)*len(st[stack[0]]))
     model.x = Var( model.ITEMS, within=Binary )
     model.v = Var(model.ORDERS, within=Binary)#ensures consecutive
     model.w = Var(model.ORDERS, within=Binary)#hitters
@@ -108,16 +108,19 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     model.teams = ConstraintList(); 
     model.vorder = ConstraintList(); model.worder = ConstraintList(); model.vwcross = ConstraintList()
     model.vwtot = ConstraintList()
-    for tbarr in teambool: 
-        tb = dctry(df, tbarr)
+    for j in range(len(tb)): 
+        tm = dctry(df, tb[j])
+        om = dctry(df, ob[j])
         k_ = k    # keep track of first order index for current team
-        model.teams.add(sum(tb[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # only a max of mst hitters
-        model.teams.add(sum(stack[0]*tb[i]*p[i]*model.x[i] + ob[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
+        print(stack[0])
+
+        model.teams.add(sum(tm[i]*h[i]*model.x[i] for i in model.ITEMS) <= 4  )  # only a max of mst hitters
+        model.teams.add(sum(stack[0]*tm[i]*p[i]*model.x[i] + om[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
         for odx in range(len(st[stack[0]])):          # consecutive batters constraint
             sx0 = dctry(df, st[stack[0]][odx])
             sx1 = dctry(df, st[stack[1]][odx])
-            model.vorder.add(expr = sum(sx0[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*model.v[k])
-            model.worder.add(expr = sum(sx1[i]*tb[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*model.w[k])
+            model.vorder.add(expr = sum(sx0[i]*tm[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[0]*model.v[k])
+            model.worder.add(expr = sum(sx1[i]*tm[i]*h[i]*model.x[i] for i in model.ITEMS) >= stack[1]*model.w[k])
             k += 1
         model.vwtot.add(expr = sum(model.v[l]+model.w[l]  for l in range(k_,k)) <= 1) # make sure v/w distinct
 

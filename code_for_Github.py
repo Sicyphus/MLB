@@ -27,7 +27,7 @@ def team_sampler(dframe, n): # get sample of 2n teams from team list
     for team in selecteams:  # for each team, find opponent and add to list
         opp = dframe[dframe['Team'] == team]['Opp'].to_list()
         if len(set(opp)) > 1: print('Warning: Opponent team ambiguity')
-        else: opps.append(opp[0].replace('@',''))
+        else: opps.append(opp[0])
     print(selecteams+opps)
     return selecteams+opps
 
@@ -51,15 +51,12 @@ def printframe(dframe, cols):
     for i in range(len(dframe)):
         print(dframe.iloc[i][cols])
 
-def name_proc(frm):
-    frm_col = frm['Player Name'].str.lower() + '_' + frm['Team']
-    deleted = [' jr',' sr',r'\s+',r'\.']
-    for d in deleted: 
-        print(frm_col)
-        print(d)
-        frm_col.replace(regex=True, inplace=True, to_replace=d, value=r'')
-        print(frm_col) 
-        print(';;;;;;;;;;')    
+def name_proc(frm, namelbl, teamlbl):
+    frm_col = frm[namelbl].str.lower() + '_' + frm[teamlbl]
+    bef = [' jr',' sr',r'\s+',r'\.','WSH']
+    aft = [r'',r'',r'',r'','WAS']
+    for i in range(len(bef)): 
+        frm_col.replace(regex=True, inplace=True, to_replace=bef[i], value=aft[i])
     return frm_col
 
 def create_base(nparr):  # create basis vector from positions
@@ -86,10 +83,10 @@ def frame_maker(date, numg): # format data frames, cut away fat
     hdf2 = hdf2[['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)','Proj FP','Actual FP']]
     hdf2 = hdf2[hdf2['Batting Order (Projected)'] != 'x']    #only confirmed ordered batters
     
-    pdf1['Name_Team'] = name_proc(pdf1)
-    pdf2['Name_Team'] = name_proc(pdf2)
-    hdf1['Name_Team'] = name_proc(hdf1)
-    hdf2['Name_Team'] = name_proc(hdf2)
+    pdf1['Name_Team'] = name_proc(pdf1,'Player Name','Team')
+    pdf2['Name_Team'] = name_proc(pdf2,'Player Name','Team')
+    hdf1['Name_Team'] = name_proc(hdf1,'Player Name','Team')
+    hdf2['Name_Team'] = name_proc(hdf2,'Player Name','Team')
     
     pdf = pd.merge(pdf1, pdf2, how = 'inner', on = 'Name_Team')  # fasten FD/DK together
     hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
@@ -98,12 +95,14 @@ def frame_maker(date, numg): # format data frames, cut away fat
 
     df['Pos_x'] = df['Pos_x'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df['Pos_y'] = df['Pos_y'].str.split('/').str[0]#for multi-pos players choose 1st pos
+    df['Opp_x'].replace(regex=True, inplace=True, to_replace='@', value=r'') # eliminate '@' from opp col
+    df['Opp_y'].replace(regex=True, inplace=True, to_replace='@', value=r'') # eliminate '@' from opp col
     df = df[df['Proj FP_x']>0]       # 0 is a bad fantasy score to use
     df = df[df['Proj FP_y']>0]       # 0 is a bad fantasy score to use
     
     if numg == '0': teamlist = team_fromfile(date)  # same day game slate option
-    else: teamlist = team_sampler(df, int(numg))  # get random slate  
-    df = df[df['Team'].isin(teamlist)]
+    else: teamlist = team_sampler(df, int(numg))  # get random slate
+    df = df[df['Team_x'].isin(teamlist)]
 
     return df, teamlist
 
@@ -128,7 +127,7 @@ def mask_maker(df, teamlist):
     ob = []               # opponent masks
     for team in teamlist:     
         tb.append(col_to_npbool(df,'Team',team))
-        ob.append(col_to_npbool(df,'Team',team))                   # team opponent
+        ob.append(col_to_npbool(df,'Opp',team))                   # team opponent
     
     st = {2:[], 3: [], 4: [] , 5: []}  # stacking masks
     for n in [2, 3, 4, 5]:  # n is consecutive number of batters
@@ -155,7 +154,7 @@ def output(rframe, date, rostnum, platform):
     names = (platform=='DK')*'Name'+(platform=='FD')*'Nickname'  # make new name/team column for matching
     teams = (platform=='DK')*'TeamAbbrev'+(platform=='FD')*'Team'
     outid = (platform=='DK')*'ID'+(platform=='FD')*'Id'  # name used for outputfile
-    plframe['Name_Team'] = plframe[names].str.lower().str.replace(' jr',' ').str.replace(' jr',' ').str.replace(' ','').str.replace('.','') + '_' + plframe[teams]
+    plframe['Name_Team'] = name_proc(plframe, names, teams)
 
     posdict = {'P':[],'C':[],'1B':[],'2B':[],'3B':[],'SS':[],'OF':[],'UTIL':[]}
     
@@ -188,11 +187,10 @@ def output(rframe, date, rostnum, platform):
           
 def main():
     #JESSE look over that delete loop above (deletes three columns...)
-    #      fix empty solutions
     # opposing pitchers (not that bad)
-    # may need to delete or do womething with that teambool constraint
     #problematic fanduel constraints
-    #regex
+    #fix line 157
+    # @symbol in opp
     date, no_games, overlap = sys.argv[1:]
     q = 0
     rosters = []

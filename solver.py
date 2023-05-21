@@ -112,10 +112,8 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
         tm = dctry(df, tb[j])
         om = dctry(df, ob[j])
         k_ = k    # keep track of first order index for current team
-        print(stack[0])
-
-        model.teams.add(sum(tm[i]*h[i]*model.x[i] for i in model.ITEMS) <= 4  )  # only a max of mst hitters
-        model.teams.add(sum(stack[0]*tm[i]*p[i]*model.x[i] + om[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers / only a max of mst hitters
+        model.teams.add(sum(tm[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # only a max of mst hitters
+        model.teams.add(sum(stack[0]*tm[i]*p[i]*model.x[i] + om[i]*h[i]*model.x[i] for i in model.ITEMS) <= stack[0]  )  # no opposing pitchers
         for odx in range(len(st[stack[0]])):          # consecutive batters constraint
             sx0 = dctry(df, st[stack[0]][odx])
             sx1 = dctry(df, st[stack[1]][odx])
@@ -155,7 +153,7 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
     #model.display()
     x = []
     for i in model.x:
-        if model.x[i].value == None or time.time()-curtime > 180: return np.array([])
+        if model.x[i].value == None or time.time()-curtime > 100: return np.array([])
         x.append(int(model.x[i].value) )
     x = np.array(x)
     if None in x: x = []

@@ -199,7 +199,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':2, 'FD':2}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':100, 'FD':100}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -216,7 +216,8 @@ def main():
     params['B'] = float(35000) 
     limits = {'no_ptch': 1, 'no_hit': 8, 'no_c': 2, 'no_1b': 2, 'no_c1b': 2,'no_2b': 2, 'no_3b': 2, 'no_ss': 2, 'no_of': 4} 
     masks = mask_maker(frame, teams)
-    q = max(1, q)    # 5/3 stack invalid for FD
+    q = max(2, q)    # 5/3 & 4/4 stack invalid for FD; advance stack index
+    params['stack'] = stacks[q]
     while len(rosters) < no_rosters['FD'] + no_rosters['DK']: #get FanDuel rosters
         soln=solver.glp(frame, masks, params, limits, rosters,'FD')   # alternative: gurobi
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue

@@ -1,3 +1,8 @@
+INSTALL: sudo apt-get install python3-pip glpk-utils
+         python -m pip install pandas, scipy, gurobipy, pyomo
+         
+
+
 Fantasy Hockey IP Code
 ======================
 

@@ -41,9 +41,10 @@ def team_fromfile(date):
         if allteams1[i] in team_trans.keys(): allteams1[i] = team_trans[allteams1[i]]
     for i in range(len(allteams2)): 
         if allteams2[i] in team_trans.keys(): allteams2[i] = team_trans[allteams2[i]]
-    if set(allteams1)&set(allteams2) != set(allteams2):
-        print('Warning: Team slate for DK/FD not same:')
-        print((set(allteams1)|set(allteams2))-(set(allteams1)&set(allteams2)))
+    if set(allteams1) != set(allteams2):
+        print('Error: Team slate for DK/FD not same:')
+        print(set(allteams1))
+        print(set(allteams2))
         time.sleep(4)
     return allteams1
     
@@ -67,27 +68,39 @@ def create_base(nparr):  # create basis vector from positions
     
 def rename(df, app):  # rename columns from merging protocol
     return df.rename({'Player Name_'+app: 'Player Name','Team_'+app: 'Team', 'Opp_'+app: 'Opp',
-    'Pos_'+app: 'Pos','Salary_'+app: 'Salary', 'Batting Order (Projected)_'+app: 'Batting Order (Projected)',
+    'Pos_'+app: 'Pos','Salary_'+app: 'Salary', 'Batting Order_'+app: 'Batting Order',
     'Proj FP_'+app: 'Proj FP','Actual FP_'+app: 'Actual FP'}, axis=1)
     
 def frame_maker(date, numg): # format data frames, cut away fat
     #need to process DK and FD frames separately at first
-    pdf1 = pd.read_csv('data/DFN MLB Pitchers DK {}.csv'.format(date))
+    pdf1 = pd.read_csv('data/DFN MLB Pitchers DK {}.csv'.format(date))  #pitching
     pdf1 = pdf1[['Player Name','Pos','Salary','Team','Opp','Proj FP','Actual FP']]
     pdf2 = pd.read_csv('data/DFN MLB Pitchers FD {}.csv'.format(date))
     pdf2 = pdf2[['Player Name','Pos','Salary','Team','Opp','Proj FP','Actual FP']]
-    hdf1 = pd.read_csv('data/DFN MLB Hitters DK {}.csv'.format(date))
-    hdf1 = hdf1[['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)','Proj FP','Actual FP']]
-    hdf1 = hdf1[hdf1['Batting Order (Projected)'] != 'x']    #only confirmed ordered batters
-    hdf2 = pd.read_csv('data/DFN MLB Hitters FD {}.csv'.format(date))
-    hdf2 = hdf2[['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)','Proj FP','Actual FP']]
-    hdf2 = hdf2[hdf2['Batting Order (Projected)'] != 'x']    #only confirmed ordered batters
+
+    hdf1 = pd.read_csv('data/DFN MLB Hitters DK {}.csv'.format(date)) #hitting (DK)
+    hdf1 = hdf1[['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)','Batting Order (Confirmed)','Proj FP','Actual FP']]#combine proj ord w/ confirmed
+    maskdkp = hdf1['Batting Order (Projected)'].isin([str(i+1) for i in range(9)])
+    hdf1.loc[~maskdkp, 'Batting Order (Projected)'] = '0' 
+    maskdkc = hdf1['Batting Order (Confirmed)'].isin([str(i+1) for i in range(9)])
+    hdf1.loc[~maskdkc, 'Batting Order (Confirmed)'] = '0' 
+    hdf1['Batting Order'] = hdf1[['Batting Order (Projected)','Batting Order (Confirmed)']].max(axis=1)    
+    hdf1.drop(['Batting Order (Confirmed)', 'Batting Order (Projected)'], axis=1,inplace=True)
+   
+    hdf2 = pd.read_csv('data/DFN MLB Hitters FD {}.csv'.format(date)) #hitting (FD)
+    hdf2 = hdf2[['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)','Batting Order (Confirmed)','Proj FP','Actual FP']]#combine proj ord w/ confirmed
+    maskfdp = hdf2['Batting Order (Projected)'].isin([str(i+1) for i in range(9)])
+    hdf2.loc[~maskfdp, 'Batting Order (Projected)'] = '0' 
+    maskfdc = hdf2['Batting Order (Confirmed)'].isin([str(i+1) for i in range(9)])
+    hdf2.loc[~maskfdc, 'Batting Order (Confirmed)'] = '0' 
+    hdf2['Batting Order'] = hdf2[['Batting Order (Projected)','Batting Order (Confirmed)']].max(axis=1)    
+    hdf2.drop(['Batting Order (Confirmed)', 'Batting Order (Projected)'], axis=1,inplace=True)
     
     pdf1['Name_Team'] = name_proc(pdf1,'Player Name','Team')
     pdf2['Name_Team'] = name_proc(pdf2,'Player Name','Team')
     hdf1['Name_Team'] = name_proc(hdf1,'Player Name','Team')
     hdf2['Name_Team'] = name_proc(hdf2,'Player Name','Team')
-    
+
     pdf = pd.merge(pdf1, pdf2, how = 'inner', on = 'Name_Team')  # fasten FD/DK together
     hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
 
@@ -128,14 +141,16 @@ def mask_maker(df, teamlist):
     for team in teamlist:     
         tb.append(col_to_npbool(df,'Team',team))
         ob.append(col_to_npbool(df,'Opp',team))                   # team opponent
+        #print(team)
+        #print(tb[-1])
     
     st = {2:[], 3: [], 4: [] , 5: []}  # stacking masks
     for n in [2, 3, 4, 5]:  # n is consecutive number of batters
         for k in range(1, tothit+1):   #  for all 9 possible masks
-            stemp = np.array([0]*len(df['Batting Order (Projected)']))
+            stemp = np.array([0]*len(df['Batting Order']))
             for i in range(n):
-                if k+i > tothit: stemp+=(df['Batting Order (Projected)']==str(k+i-tothit))
-                if k+i <= tothit: stemp+=(df['Batting Order (Projected)']==str(k+i))
+                if k+i > tothit: stemp+=(df['Batting Order']==str(k+i-tothit))
+                if k+i <= tothit: stemp+=(df['Batting Order']==str(k+i))
             st[n].append(stemp)
     
     #masks in dict for easier transport 
@@ -199,7 +214,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':100, 'FD':100}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -209,7 +224,7 @@ def main():
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)']])
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order']])
         output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), 'DK')
         
     frame = rename(df, 'y')        # find top FD rosters
@@ -223,7 +238,7 @@ def main():
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order (Projected)']])
+        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order']])
         output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), 'FD')
         
     grader(frame, rosters, sys.argv[1:])#,

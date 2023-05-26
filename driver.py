@@ -1,18 +1,15 @@
 import os, sys, numpy as np
 from matplotlib import pyplot as plt
 
+for numgames in [7,9,11,13]:
+    for overlap in [4,5,6,7]:
+        for i in range(1,31):
+            date = '4_'+str(i)
+            os.system('python3 code_for_Github.py {} {} {}'.format(date,numgames,str(overlap)))
 
+
+'''
 file_list = os.listdir('archive/one_stack')
-
-'''
-with open() as f:
-  v = NP.loadtxt(f, delimiter=",", dtype='float', comments="#", skiprows=1, usecols=None)
-v_hist = np.ravel(v)   # 'flatten' v
-            n, bins, patches = ax1.hist(v_hist, bins=50, normed=1, facecolor='green')
-            fig = plt.figure()
-            ax1 = fig.add_subplot(111)
-'''
-'''
 
 score = {'3': [], '4': [], '5': []}
 for fl in file_list:
@@ -36,6 +33,15 @@ plt.show()
 print(np.mean(score['3']))
 print(np.mean(score['4']))
 print(np.mean(score['5']))
+'''
+
+'''
+with open() as f:
+  v = NP.loadtxt(f, delimiter=",", dtype='float', comments="#", skiprows=1, usecols=None)
+v_hist = np.ravel(v)   # 'flatten' v
+            n, bins, patches = ax1.hist(v_hist, bins=50, normed=1, facecolor='green')
+            fig = plt.figure()
+            ax1 = fig.add_subplot(111)
 '''
             
 '''

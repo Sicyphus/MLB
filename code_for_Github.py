@@ -18,7 +18,6 @@ def grader(df, sol_matrix, basefilename):  # score results\output to file
         f.write(str(scorecum))
 
 def team_sampler(dframe, n): # get sample of 2n teams from team list
-    print(dframe.columns)
     allteams = set(dframe['Team_x'].to_list())
     if len(allteams)/2 < n:
         print('Not enough games for total teams')
@@ -29,7 +28,7 @@ def team_sampler(dframe, n): # get sample of 2n teams from team list
         opp = dframe[dframe['Team_x'] == team]['Opp_x'].to_list()
         if len(set(opp)) > 1: print('Warning: Opponent team ambiguity')
         else: opps.append(opp[0])
-    print(selecteams+opps)
+    #print(selecteams+opps)
     return selecteams+opps
 
 def team_fromfile(date):
@@ -158,7 +157,8 @@ def mask_maker(df, teamlist):
     m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'ob':ob,'st': st}     
     return m
 
-def output(rframe, date, rostnum, platform):
+def output(rframe, date, rostnum, ng, platform):
+    if ng != '0': return     # for random slate, this method not used
     if rostnum == 1: 
         os.system('rm -rf platform/*Rosters*{}*'.format(date))  # reset file if first rodeo
         open('platform/{}Rosters{}.csv'.format('DK', date), 'w').write('P,P,C,1B,2B,3B,SS,OF,OF,OF\n')  # output titles
@@ -215,7 +215,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -226,7 +226,7 @@ def main():
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
         print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order']])
-        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), 'DK')
+        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), no_games, 'DK')
         
     frame = rename(df, 'y')        # find top FD rosters
     params['B'] = float(35000) 
@@ -240,7 +240,7 @@ def main():
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
         print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order']])
-        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), 'FD')
+        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), no_games, 'FD')
         
     grader(frame, rosters, sys.argv[1:])#,
     

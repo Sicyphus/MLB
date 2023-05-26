@@ -18,14 +18,15 @@ def grader(df, sol_matrix, basefilename):  # score results\output to file
         f.write(str(scorecum))
 
 def team_sampler(dframe, n): # get sample of 2n teams from team list
-    allteams = set(dframe['Team'].to_list())
+    print(dframe.columns)
+    allteams = set(dframe['Team_x'].to_list())
     if len(allteams)/2 < n:
         print('Not enough games for total teams')
         sys.exit()
     selecteams = random.sample(allteams, n)  # select 2n teams
     opps = []
     for team in selecteams:  # for each team, find opponent and add to list
-        opp = dframe[dframe['Team'] == team]['Opp'].to_list()
+        opp = dframe[dframe['Team_x'] == team]['Opp_x'].to_list()
         if len(set(opp)) > 1: print('Warning: Opponent team ambiguity')
         else: opps.append(opp[0])
     print(selecteams+opps)

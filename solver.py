@@ -149,7 +149,7 @@ def glp(df, m, params, limits, rosters, platform): # GLP solver (uses executable
 
     curtime = time.time()
 
-    optimizer=SolverFactory('gurobi').solve(model)
+    optimizer=SolverFactory('glpk').solve(model)
     #model.display()
     x = []
     for i in model.x:

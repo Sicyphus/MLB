@@ -48,14 +48,25 @@ def team_fromfile(date):
         time.sleep(4)
     return allteams1
     
+def name_discr(h1, h2, p1, p2, h, p): #find name discrepancies b/t FD and DK
+    s1=set(h1['Name_Team'])|set(p1['Name_Team'])
+    s2=set(h2['Name_Team'])|set(p2['Name_Team'])
+    s=set(h['Name_Team'])|set(p['Name_Team'])
+    diff1, diff2 = s1.difference(s), s2.difference(s)
+    if len(diff1) != 0 or len(diff2) != 0: 
+        print('Warning: Name Discrepancy')
+        print(diff1)
+        print(diff2)
+        time.sleep(10)
+
 def printframe(dframe, cols):    
     for i in range(len(dframe)):
         print(dframe.iloc[i][cols])
 
-def name_proc(frm, namelbl, teamlbl):
-    frm_col = frm[namelbl].str.lower() + '_' + frm[teamlbl]
-    bef = [' jr',' sr',r'\s+',r'\.','WSH']
-    aft = [r'',r'',r'',r'','WAS']
+def name_proc(frm, namelbl, teamlbl): # standardize the names (...and FD names replaced with DK)
+    frm_col = frm[namelbl].str.lower() + '_' + frm[teamlbl] 
+    bef = [' jr',' sr',r'\s+',r'\.','WSH','michaeltaylor_MIN','enriquehernandez_BOS', 'giovannyurshela_LAA', 'michaelbrosseau_MIL',  'koudaisenga_NYM', 'julioerodriguez_SEA', 'peteralonso_NYM', 'yulieskigurriel_MIA', 'ji-hwanbae_PIT','danvogelbach_NYM','abrahamtoro-hernandez_MIL']
+    aft = [r'',r'',r'',r'','WAS','michaelataylor_MIN', 'kikehernandez_BOS', 'giourshela_LAA', 'mikebrosseau_MIL', 'kodaisenga_NYM', 'juliorodriguez_SEA', 'petealonso_NYM', 'yuligurriel_MIA', 'jihwanbae_PIT','danielvogelbach_NYM','abrahamtoro_MIL']
     for i in range(len(bef)): 
         frm_col.replace(regex=True, inplace=True, to_replace=bef[i], value=aft[i])
     return frm_col
@@ -96,22 +107,22 @@ def frame_maker(date, numg): # format data frames, cut away fat
     hdf2['Batting Order'] = hdf2[['Batting Order (Projected)','Batting Order (Confirmed)']].max(axis=1)    
     hdf2.drop(['Batting Order (Confirmed)', 'Batting Order (Projected)'], axis=1,inplace=True)
     
-    pdf1['Name_Team'] = name_proc(pdf1,'Player Name','Team')
-    pdf2['Name_Team'] = name_proc(pdf2,'Player Name','Team')
-    hdf1['Name_Team'] = name_proc(hdf1,'Player Name','Team')
-    hdf2['Name_Team'] = name_proc(hdf2,'Player Name','Team')
+    # create new col Name_Team for merge; 0 is a bad fantasy score to use    
+    pdf1['Name_Team'] = name_proc(pdf1,'Player Name','Team'); pdf1 = pdf1[pdf1['Proj FP']>0]       
+    pdf2['Name_Team'] = name_proc(pdf2,'Player Name','Team'); pdf2 = pdf2[pdf2['Proj FP']>0]
+    hdf1['Name_Team'] = name_proc(hdf1,'Player Name','Team'); hdf1 = hdf1[hdf1['Proj FP']>0]
+    hdf2['Name_Team'] = name_proc(hdf2,'Player Name','Team'); hdf2 = hdf2[hdf2['Proj FP']>0]
 
     pdf = pd.merge(pdf1, pdf2, how = 'inner', on = 'Name_Team')  # fasten FD/DK together
     hdf = pd.merge(hdf1, hdf2, how = 'inner', on = 'Name_Team')
-
+    
+    name_discr(pdf1, pdf2, hdf1, hdf2, pdf, hdf)    # check for name discrepancies
     df = pd.concat([pdf, hdf])
 
     df['Pos_x'] = df['Pos_x'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df['Pos_y'] = df['Pos_y'].str.split('/').str[0]#for multi-pos players choose 1st pos
     df['Opp_x'].replace(regex=True, inplace=True, to_replace='@', value=r'') # eliminate '@' from opp col
     df['Opp_y'].replace(regex=True, inplace=True, to_replace='@', value=r'') # eliminate '@' from opp col
-    df = df[df['Proj FP_x']>0]       # 0 is a bad fantasy score to use
-    df = df[df['Proj FP_y']>0]       # 0 is a bad fantasy score to use
     
     if numg == '0': teamlist = team_fromfile(date)  # same day game slate option
     else: teamlist = team_sampler(df, int(numg))  # get random slate
@@ -178,7 +189,7 @@ def output(rframe, date, rostnum, ng, platform):
         nametm = row['Name_Team']  
         match = plframe[plframe['Name_Team'] == nametm]
         if len(match) == 0:
-            print('Warning: {} not found'.format(name))
+            print('Warning: {} not found'.format(nametm))
         pos = row['Pos']
         if pos in ['P','RP','SP']: posdict['P'].append(match[outid].values[0])
         if pos in ['C']: posdict['C'].append(match[outid].values[0])
@@ -215,7 +226,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':1, 'FD':1}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters

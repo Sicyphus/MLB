@@ -213,6 +213,11 @@ def output(rframe, date, rostnum, ng, platform):
     filehdl.write('\n')
           
 def main():
+    #JESSE look over that delete loop above (deletes three columns...)
+    # opposing pitchers (not that bad)
+    #problematic fanduel constraints
+    #fix line 157
+    # @symbol in opp
     date, no_games, overlap = sys.argv[1:]
     q = 0
     rosters = []

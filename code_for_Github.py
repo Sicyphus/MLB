@@ -8,7 +8,7 @@ def col_to_npbool(dframe, col, val):
     return vec
 
 def grader(df, sol_matrix, basefilename):  # score results\output to file
-    filename = 'out/{}.csv'.format('_'.join(basefilename))
+    filename = 'research/out/{}.csv'.format('_'.join(basefilename))
     scorecum = 0
     with open(filename, 'w') as f:
         for sol in sol_matrix :
@@ -57,8 +57,9 @@ def create_base(nparr):  # create basis vector from positions
     return tmplst
     
 def rename(df, app):  # rename columns from merging protocol
-    return df.rename({'PLAYER_'+app: 'PLAYER','TEAM_'+app: 'TEAM', 
-                      'OPP_'+app: 'OPP','POS_'+app: 'POS','SALARY_'+app: 'SALARY',                       
+    return df.rename({'PLAYER_'+app: 'PLAYER','TEAM_'+app: 'TEAM',
+                      'PARTNERID_'+app: 'PARTNERID','OPP_'+app: 'OPP',
+                      'POS_'+app: 'POS','SALARY_'+app: 'SALARY',                       
                       'BO_'+app: 'BO','FPTS_'+app: 'FPTS'}, axis=1)
     
 def frame_maker(date, numg): # format data frames, cut away fat
@@ -68,7 +69,8 @@ def frame_maker(date, numg): # format data frames, cut away fat
     df_dk['PLAYERTEAM'] = df_dk['PLAYER']+df_dk['TEAM']       
     pdf_dk = df_dk[df_dk['POS']=='SP'] # pitchers
     hdf_dk = df_dk[df_dk['POS']!='SP'] # hitters
-    hdf_dk['BO'] = hdf_dk['TEAM'].cumcount()+1  # make new col 'bat order'
+    hdf_dk['BO'] = hdf_dk.groupby('TEAM').cumcount()+1  # make new col 'bat order'
+
     
     df_fd = pd.read_csv('in/FD{}.csv'.format(date))  #pitching
     df_fd = df_fd[['PLAYER','PARTNERID','POS','SALARY','TEAM','OPP','FPTS']]
@@ -80,11 +82,14 @@ def frame_maker(date, numg): # format data frames, cut away fat
     name_discr([pdf_dk, pdf_fd, hdf_dk, hdf_fd])    # check for name discrepancies
     pdf = pd.merge(pdf_dk, pdf_fd, how = 'inner', on = 'PLAYERTEAM') # fasten FD/
     hdf = pd.merge(hdf_dk, hdf_fd, how = 'inner', on = 'PLAYERTEAM') # DK together
+    for col in ['BO_x','BO_y']: hdf[col] = hdf[col].astype(int) # orders must be inte
     
     df = pd.concat([pdf, hdf])
 
-    # no rows with NaN 
-    df = df[df['POS'].notna()]; df = df[df['SALARY'].notna()]; df = df[df['FPTS'].notna()];
+    # no rows with NaN ;  id must be integers
+    for col in ['POS_x','SALARY_x','FPTS_x','POS_y','SALARY_y','FPTS_y']: 
+        df = df[df[col].notna()]
+    for col in ['PARTNERID_x','PARTNERID_y']: df[col] = df[col].astype(int)
 
     # under construction: make new method that picks OF by default
     df['POS_x'] = df['POS_x'].apply(pos_split)#for multi-pos players choose 1st pos
@@ -99,7 +104,7 @@ def frame_maker(date, numg): # format data frames, cut away fat
 
 def mask_maker(df, teamlist):           # create masks to be used for opt. constraints
     tothit = 9                          # nine hitters in order
-    
+
     sp_ = col_to_npbool(df,'POS','SP')   # pitcher mask (DK)
     p_ = col_to_npbool(df,'POS','P')   # pitcher mask (FD)
 
@@ -143,12 +148,12 @@ def output(rframe, date, rostnum, ng, platform):
              'w').write('P,P,C,1B,2B,3B,SS,OF,OF,OF\n')  # output titles
         open('out/{}Rosters{}.csv'.format('FD', date),          
              'w').write('P,C/1B,2B,3B,SS,OF,OF,OF,UTIL\n') 
-    filehdl = open('platform/{}Rosters{}.csv'.format(platform, date), 'a')
+    filehdl = open('out/{}Rosters{}.csv'.format(platform, date), 'a')
 
-    posdict = {'P':[],'C':[],'1B':[],'2B':[],'3B':[],'SS':[],'OF':[],'UTIL':[]}
+    posdict = {'SP':[], 'P':[],'C':[],'1B':[],'2B':[],'3B':[],'SS':[],'OF':[],'UTIL':[]}
     
     for i, row in rframe.iterrows():
-        posdict[row['POS']].append(row['PLAYERTEAM'])
+        posdict[row['POS']].append(row['PARTNERID'])
         
     # these conds indicate FD results, therefore put extra player in UTIL category 
     for strng in ['C','1B','2B','3B','SS']: 
@@ -173,7 +178,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':15, 'FD':15}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -183,8 +188,9 @@ def main():
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order']])
-        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), no_games, 'DK')
+        print(frame.loc[soln==1][['PLAYER','POS','SALARY','TEAM','OPP','BO']])
+        output(frame.loc[soln==1][['PLAYERTEAM','PARTNERID','POS']], date, len(rosters),
+               no_games, 'DK')
         
     frame = rename(df, 'y')        # find top FD rosters
     params['B'] = float(35000) 
@@ -197,8 +203,9 @@ def main():
         if len(soln) == 0: q+=1; params['stack'] = stacks[q]; continue
         else: rosters.append(soln)
         print([len(rosters)]+stacks[q])
-        print(frame.loc[soln==1][['Player Name','Pos','Salary','Team','Opp','Batting Order']])
-        output(frame.loc[soln==1][['Name_Team','Pos']], date, len(rosters), no_games, 'FD')
+        print(frame.loc[soln==1][['PLAYER','POS','SALARY','TEAM','OPP','BO']])
+        output(frame.loc[soln==1][['PLAYERTEAM','PARTNERID','POS']], date, len(rosters), 
+               no_games, 'FD')
         
     grader(frame, rosters, sys.argv[1:])#,
     

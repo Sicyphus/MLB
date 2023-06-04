@@ -70,6 +70,7 @@ def frame_maker(date, numg): # format data frames, cut away fat
     pdf_dk = df_dk[df_dk['POS']=='SP'] # pitchers
     hdf_dk = df_dk[df_dk['POS']!='SP'] # hitters
     hdf_dk['BO'] = hdf_dk.groupby('TEAM').cumcount()+1  # make new col 'bat order'
+    pdf_dk['BO'] = 0
 
     
     df_fd = pd.read_csv('in/FD{}.csv'.format(date))  #pitching
@@ -78,18 +79,19 @@ def frame_maker(date, numg): # format data frames, cut away fat
     pdf_fd = df_fd[df_fd['POS']=='P'] # pitchers
     hdf_fd = df_fd[df_fd['POS']!='P'] # hitters
     hdf_fd['BO'] = hdf_fd.groupby('TEAM').cumcount()+1  # make new col 'bat order'
+    pdf_fd['BO'] = 0
 
     name_discr([pdf_dk, pdf_fd, hdf_dk, hdf_fd])    # check for name discrepancies
     pdf = pd.merge(pdf_dk, pdf_fd, how = 'inner', on = 'PLAYERTEAM') # fasten FD/
     hdf = pd.merge(hdf_dk, hdf_fd, how = 'inner', on = 'PLAYERTEAM') # DK together
-    for col in ['BO_x','BO_y']: hdf[col] = hdf[col].astype(int) # orders must be inte
     
     df = pd.concat([pdf, hdf])
 
     # no rows with NaN ;  id must be integers
     for col in ['POS_x','SALARY_x','FPTS_x','POS_y','SALARY_y','FPTS_y']: 
         df = df[df[col].notna()]
-    for col in ['PARTNERID_x','PARTNERID_y']: df[col] = df[col].astype(int)
+    for col in ['PARTNERID_x','PARTNERID_y','BO_x','BO_y']:
+        df[col] = df[col].astype(int).astype(str) # orders must be inte
 
     # under construction: make new method that picks OF by default
     df['POS_x'] = df['POS_x'].apply(pos_split)#for multi-pos players choose 1st pos
@@ -178,7 +180,7 @@ def main():
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
-    no_rosters = {'DK':15, 'FD':15}    # 150 DK rosters, #150 FD rosters
+    no_rosters = {'DK':150, 'FD':150}    # 150 DK rosters, #150 FD rosters
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters

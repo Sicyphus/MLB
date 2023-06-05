@@ -1,0 +1,9 @@
+import pandas as pd
+teams=<enterteamsjere>#['TOR','NYM','OAK','MIA','COL','KCR','CLE','MIN','DET','CHW','LAA','HOU','SEA','TEX','TBR','BOS','PHI','WAS','MIL','CIN']
+df=pd.read_csv('research/in/DK6_4.csv')
+dfe=df[df['TEAM'].isin(teams)]
+dfe.to_csv('in/DK6_4.csv')
+df=pd.read_csv('research/in/FD6_4.csv')
+dfe=df[df['TEAM'].isin(teams)]
+dfe.to_csv('in/FD6_4.csv')
+

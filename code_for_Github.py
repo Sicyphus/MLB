@@ -17,18 +17,45 @@ def grader(df, sol_matrix, basefilename):  # score results\output to file
             f.write(str(score)+',')
         f.write(str(scorecum))
 
-def prep_out(dat):   # reformat output roster files if needed (make space for rosters)
-    coloffst = {'DK': 11, 'FD': 10}
-    outfile = open('out/DK'+dat+'.csv','r')
-    datadk =  list(csv.reader(outfile))
-    outfile.close()
-    outfile = open('out/DK'+dat+'.csv','w')
-    if datadk[0][0] == 'Position':
-        spacemkr = ['']*coloffst['DK']
+def prep_out(dat, ptype):   # reformat output roster files if needed
+    coloffst = {'DK': 10, 'FD': 9}
+    dkfile, fdfile = 'out/DK'+dat+'.csv', 'out/FD'+dat+'.csv'  
+    outfile = open(dkfile,'r'); datadk =  list(csv.reader(outfile)); outfile.close(); 
+    outfile = open(fdfile,'r'); datafd =  list(csv.reader(outfile)); outfile.close(); 
+    if type == 'pre':   # (make space for rosters)  add padding to DK out 
+        outfile = open(dkfile,'w')
+        if datadk[0][0] == 'Position':
+            spacemkr = ['']*(coloffst['DK']+1)  #extra column for padding
+            for i in range(len(datadk)):
+                outfile.write(','.join(spacemkr+datadk[i])+'\n')
+        outfile.close()
+    if ptype == 'post':   # For DK/FD, empty out previous data
+        datastart = 0
+        outfile = open(dkfile,'w')
+        for i in range(len(datadk)):  # find where most recent results start
+            if datadk[i][0] in ['P','SP','RP']:
+                datastart = i
+        for i in range(datastart,len(datadk)): #move recent results to top
+            for k in range(coloffst['DK']):
+                datadk[i-datastart][k] = datadk[i][k]
+        for j in range(len(datadk)-datastart,len(datadk)):   # clear out everything 
+            for k in range(coloffst['DK']):                 # underneath  
+                datadk[j][k] = ''
         for i in range(len(datadk)):
-            outfile.write(','.join(spacemkr+datadk[i])+'\n')
-    outfile.close()
-    sys.exit()
+            outfile.write(','.join(datadk[i])+'\n')
+        datastart = 0
+        outfile = open(fdfile,'w')
+        for i in range(len(datafd)):  # find where most recent results start
+            if datafd[i][0] in ['P','SP','RP']:
+                datastart = i
+        for i in range(datastart,len(datafd)): #move recent results to top
+            for k in range(coloffst['FD']):
+                datafd[i-datastart][k] = datafd[i][k]
+        for j in range(len(datadk)-datastart,len(datafd)):   # clear out everything underneath  
+            for k in range(coloffst['FD']):
+                datafd[j][k] = ''
+        for i in range(len(datafd)):
+            outfile.write(','.join(datafd[i])+'\n')
 
 def team_sampler(dframe, n): # get sample of 2n teams from team list
     allteams = set(dframe['TEAM_x'].to_list())
@@ -195,7 +222,7 @@ def main():
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
               'no_2b': 1, 'no_3b': 1, 'no_ss': 1, 'no_of': 3}                      
     no_rosters = {'DK':100, 'FD':100}    # 150 DK rosters, #150 FD rosters
-    prep_out(date)         # reformat roster output/template file as needed
+    prep_out(date,'pre')     # reformat roster output/template file as needed
     df, teams = frame_maker(date, no_games)
 
     frame = rename(df, 'x')         # find top DK rosters
@@ -224,6 +251,7 @@ def main():
         output(frame.loc[soln==1][['PLAYERTEAM','PLATFORMID','POS']], date, len(rosters), 
                no_games, 'FD')
         
+    prep_out(date,'post')   #replace old results
     grader(frame, rosters, sys.argv[1:])#,
     
 if __name__ == "__main__":

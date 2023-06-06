@@ -1,5 +1,5 @@
-,,,,,,,,,,,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
-,,,,,,,,,,,SP,Jacob deGrom (28220906),Jacob deGrom,28220906,P,11500,STL@TEX 06/05/2023 08:05PM ET,TEX,22.41
+P,P,C ,1B,2B,3B,SS,OF,OF,OF,,Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame
+1,2,3,3,3,3,3,3,3,3,,SP,Jacob deGrom (28220906),Jacob deGrom,28220906,P,11500,STL@TEX 06/05/2023 08:05PM ET,TEX,22.41
 ,,,,,,,,,,,SP,Mitch Keller (28220907),Mitch Keller,28220907,P,10800,OAK@PIT 06/05/2023 07:05PM ET,PIT,23.5
 ,,,,,,,,,,,SP,Kevin Gausman (28220908),Kevin Gausman,28220908,P,10600,HOU@TOR 06/05/2023 07:07PM ET,TOR,24.03
 ,,,,,,,,,,,SP,Cristian Javier (28220909),Cristian Javier,28220909,P,10600,HOU@TOR 06/05/2023 07:07PM ET,HOU,20.23
@@ -941,7 +941,7 @@
 ,,,,,,,,,,,3B/OF,Hunter Dozier (28220893),Hunter Dozier,28220893,3B/OF,2000,KC@MIA 06/05/2023 06:40PM ET,KC,4.41
 ,,,,,,,,,,,3B/SS,Johan Camargo (28220895),Johan Camargo,28220895,3B/SS,2000,KC@MIA 06/05/2023 06:40PM ET,KC,0
 ,,,,,,,,,,,OF,Dairon Blanco (28220902),Dairon Blanco,28220902,OF,2000,KC@MIA 06/05/2023 06:40PM ET,KC,0
-P,P,C ,1B,2B,3B,SS,OF,OF,OF,,,,,,,,,,
-3,3,3,3,3,3B,3,3,3,3,,,,,,,,,,
-P,P,C ,1B,2B,3B,SS,OF,OF,OF,,,,,,,,,,
-3,3,3,3,3,3B,3,3,3,3,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,

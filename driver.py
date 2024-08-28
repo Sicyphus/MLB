@@ -1,10 +1,16 @@
+# driver.py
+#
+# Generate several different scenarios to find which combination of num. games/player overlap
+# produces the highest score for a given date.  As a warning, the 
+################################################################################################
+
 import os, sys, numpy as np
 from matplotlib import pyplot as plt
 
-for numgames in [7,9,11,13]:
-    for overlap in [4,5,6,7]:
-        for i in range(1,31):
-            date = '4_'+str(i)
+for numgames in [7,9,11,13]:  # loop over number of games 
+    for overlap in [4,5,6,7]:  # chosen rosters have at most this amount in common with others
+        for i in range(1,31):   # date from which to pick games
+            date = '4_'+str(i)   # "stringify" the date
             os.system('python3 code_for_Github.py {} {} {}'.format(date,numgames,str(overlap)))
 
 

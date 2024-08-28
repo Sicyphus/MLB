@@ -1,3 +1,9 @@
+# solver.py
+#
+# This sets up the mathematical formulation for the lineup picket.  Using Gurobi (or GLPK),
+# generate the solution predicting the roster with the highest score.  Then the next higher,...
+################################################################################################ 
+
 import numpy as np , gurobipy as gp, time
 from gurobipy import GRB
 from pyomo.environ import *

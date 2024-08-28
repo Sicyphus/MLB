@@ -1,9 +1,20 @@
-#python code_for_Github.py 4_26 9 3     # April 26, 9 games, max overlap 3
+# code_for_Github.py 
+#
+# For a given slate of games, sample number from that slate, and overlap, find the optimal
+# fantasy MLB roster.  Pandas is used for misc. utilities, numpy for data organization,
+# scipy for sparse matrices, and GLPK/Gurobi for the optimization.  The output is a .csv
+# file giving successive optimal rosters and their scores.
+# Usage:
+# python code_for_Github.py 4_26 9 3     # April 26, 9 games, max overlap 3
+# 
+# Notice: Gurobi is only free for simple enough cases.  It charges for more complicated examples.
+############################################################################################
+
 import pandas as pd, numpy as np, sys, random, scipy.sparse as sp,time,solver, os, csv
 
 
 
-def col_to_npbool(dframe, col, val):
+def col_to_npbool(dframe, col, val): # convert data to np array for convenience
     vec = np.array((dframe[col] == val).astype(int).to_list())
     return vec
 
@@ -76,11 +87,11 @@ def name_discr(dflist): #find name/team discrepancies b/t FD and DK
         print(column_set_diff(dflist[2*i], dflist[2*i+1], 'PLAYERTEAM'))
     time.sleep(5)
 
-def pos_split(strng):
+def pos_split(strng):  # if OF anywhere in description, player considered outfielder
     if 'OF' in strng: return 'OF'
     return strng.split('/')[0]
     
-def printframe(dframe, cols):    
+def printframe(dframe, cols):    # used for debugging 
     print('DK/FD Disparities')
     for i in range(len(dframe)):
         print(dframe.iloc[i][cols])
@@ -183,7 +194,7 @@ def mask_maker(df, teamlist):           # create masks to be used for opt. const
     m = {'p': p,'h': h,'c': c,'b1': b1,'b2':b2,'b3':b3,'ss':ss,'of':of,'tb':tb,'ob':ob,'st': st}     
     return m
 
-def output(rframe, date, rostnum, ng, platform):
+def output(rframe, date, rostnum, ng, platform):  # generate optimal lineup that hasn't been used
     if ng != '0': return     # for random slate, this method not used
     if rostnum == 1: # open output file 
         os.system('rm -rf out/*Rosters*{}*'.format(date)) # reset if first rodeo
@@ -212,11 +223,12 @@ def output(rframe, date, rostnum, ng, platform):
             filehdl.write(str(idnum)+',')
     filehdl.write('\n')
           
-def main():
+def main():  # initialize rosters, stack choice, masks; run solver to get optimal lineups
+    #if len(sys.argv) 
     date, no_games, overlap = sys.argv[1:]
     q = 0
     rosters = []
-    stacks = [[5,3],[4,4], [4,3],[3,3],[3,2]]
+    stacks = [[5,3],[4,4], [4,3],[3,3],[3,2]] 
     params = {'B': float(50000),'stack': stacks[q],  
               'overlap': int(overlap)}
     limits = {'no_ptch': 2, 'no_hit': 8, 'no_c': 1, 'no_1b': 1, 'no_c1b': 2, 
